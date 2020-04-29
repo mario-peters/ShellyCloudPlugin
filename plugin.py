@@ -46,8 +46,9 @@ class BasePlugin:
         if len(Devices) == 0:
             headers = {'content-type':'application/json'}
             try:
-                response_shelly = requests.get("http://"+Parameters["Address"]+"/settings",headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(5,5))
+                response_shelly = requests.get("http://"+Parameters["Address"]+"/settings",headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
                 json_items = json.loads(response_shelly.text)
+                response_shelly.close()
                 if Parameters["Mode1"] == "SHSW-1":
                     createSHSW1(json_items)
                 elif Parameters["Mode1"] == "SHSW-25":
@@ -81,7 +82,7 @@ class BasePlugin:
             url = url + "off"
         Domoticz.Debug(url)
         try:
-            response = requests.get(url,headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(5,5))
+            response = requests.get(url,headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
             Domoticz.Debug(response.text)
             response.close()
         except requests.exceptions.Timeout as e:
@@ -101,7 +102,7 @@ class BasePlugin:
         Domoticz.Log("onHeartbeat called")
         headers = {'content-type':'application/json'}
         try:
-            request_shelly_status = requests.get("http://"+Parameters["Address"]+"/status",headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(5,5))
+            request_shelly_status = requests.get("http://"+Parameters["Address"]+"/status",headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
             Domoticz.Debug(request_shelly_status.text)
             json_request = json.loads(request_shelly_status.text)
             if Parameters["Mode1"] == "SHSW-1":
