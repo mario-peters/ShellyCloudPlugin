@@ -3,7 +3,7 @@
 # Author: Mario Peters
 #
 """
-<plugin key="ShellyCloudPlugin" name="Shelly Cloud Plugin" author="mariopeters" version="1.0.0" wikilink="https://github.com/mario-peters/ShellyCloudPlugin/wiki" externallink="https://github.com/mario-peters/ShellyCloudPlugin">
+<plugin key="ShellyCloudPlugin" name="Shelly Cloud Plugin" author="Mario Peters" version="1.0.0" wikilink="https://github.com/mario-peters/ShellyCloudPlugin/wiki" externallink="https://github.com/mario-peters/ShellyCloudPlugin">
     <description>
         <h2>Shelly Cloud Plugin</h2><br/>
         Plugin for controlling Shelly devices.
@@ -24,6 +24,7 @@
             <options>
                <option label="Shelly 1" value="SHSW-1"/>
                <option label="Shelly 2.5" value="SHSW-25"/>
+               <option label="Shelly Dimmer" value="SHDM-1"/>
             </options> 
         </param>
     </params>
@@ -52,6 +53,8 @@ class BasePlugin:
                     createSHSW1(json_items)
                 elif Parameters["Mode1"] == "SHSW-25":
                     createSHSW25(json_items)
+                elif Parameters["Mode1"] == "SHDM-1":
+                    createSHDM1(json_items)
                 else:
                     Domoticz.Log("Type: "+Parameters["Mode1"])
             except requests.exceptions.Timeout as e:
@@ -69,17 +72,22 @@ class BasePlugin:
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Log("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
         headers = {'content-type':'application/json'}
-        url = "http://"+Parameters["Address"]+"/relay/"
+        url = "http://"+Parameters["Address"]
         if Parameters["Mode1"] == "SHSW-1":
-            url = url + str(Unit-1)
+            url = url + "/relay/" + str(Unit-1)
         if Parameters["Mode1"] == "SHSW-25":
-            url = url + str(Unit-2)
-        url = url + "?turn="
+            url = url + "/relay/" + str(Unit-2)
+        if Parameters["Mode1"] == "SHDM-1":
+            url = url + "/light/" + str(Unit-1)
         if str(Command) == "On":
-            url = url + "on"
+            url = url + "?turn=on"
+        elif str(Command) == "Off":
+            url = url + "?turn=off"
+        elif str(Command) == "Set Level":
+            url = url + "?turn=on&brightness=" + str(Level)
         else:
-            url = url + "off"
-        Domoticz.Debug(url)
+            Domoticz.Log("Unknown command: "+str(Command))
+        Domoticz.Log(url)
         try:
             response = requests.get(url,headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(5,5))
             Domoticz.Debug(response.text)
@@ -87,9 +95,13 @@ class BasePlugin:
         except requests.exceptions.Timeout as e:
             Domoticz.Error(str(e))
         if str(Command) == "On":
-            Devices[Unit].Update(nValue=1,sValue="On")
+            Devices[Unit].Update(nValue=1,sValue=Devices[Unit].sValue)
+        elif str(Command) == "Off":
+            Devices[Unit].Update(nValue=0,sValue=Devices[Unit].sValue)
+        elif str(Command) == "Set Level":
+            Devices[Unit].Update(nValue=1,sValue=str(Level))
         else:
-            Devices[Unit].Update(nValue=0,sValue="Off")
+            Domoticz.Log("Unknown command: "+str(Command))
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
         Domoticz.Log("Notification: " + Name + "," + Subject + "," + Text + "," + Status + "," + str(Priority) + "," + Sound + "," + ImageFile)
@@ -108,6 +120,8 @@ class BasePlugin:
                 updateSHSW1(json_request)
             if Parameters["Mode1"] == "SHSW-25":
                 updateSHSW25(json_request)
+            if Parameters["Mode1"] == "SHDM-1":
+                updateSHDM1(json_request)
             request_shelly_status.close()
         except requests.exceptions.Timeout as e:
             Domoticz.Error(str(e))
@@ -198,6 +212,42 @@ def createSHSW25(json_items):
            createMeter(name, meter, count)
            count = count + 1
 
+def createSHDM1(json_items):
+    lights = []
+    meters = None
+    brightness = None
+    for key, value in json_items.items():
+        if key == "lights":
+            lights = value
+        if key == "meters":
+            meters = value
+        if key == "brightness":
+            brightness = value
+    count = 0
+    for light in lights:
+        name = createLight(light, count)
+        meter = {"power":0,"total":0}
+        brightness = {"brithness":0}
+        createMeter(name, meter, count)
+        #createBrightness(name, brightness, count)
+        count = count + 1
+
+def createLight(light, count):
+    name = ""
+    ison = False
+    for key, value in light.items():
+        if key == "name":
+            name = value
+        if key == "ison":
+            ison = value
+    if name == "" or name is None:
+        name = "Light"+str(count)
+    Domoticz.Device(Name=name, Unit=1+count, Used=1, Type=244, Subtype=73, Switchtype=7).Create()
+    if ison == True:
+        Devices[1+count].Update(nValue=1, sValue="On")
+    return name
+
+
 def createRelay(relay, count):
     name = ""
     ison = False
@@ -263,6 +313,32 @@ def updateSHSW25(json_request):
         updateRelay(relay, count)
         updateMeter(meters[count-1], count)
         count = count + 1
+
+def updateSHDM1(json_request):
+    lights = []
+    meters = None
+    for key, value in json_request.items():
+        if key == "lights":
+            lights = value
+        if key == "meters":
+            meters = value
+    count = 0
+    #Devices[1].Update(nValue=1, sValue="50")
+    for light in lights:
+        updateLight(light, count)
+        updateMeter(meters[count], count)
+        count = count + 1
+
+def updateLight(light, count):
+    for key, value in light.items():
+        if key == "ison":
+            if value:
+                if Devices[1+count].nValue != 1:
+                    Devices[1+count].Update(nValue=1, sValue=Devices[1+count].sValue)
+            else:
+                Devices[1+count].Update(nValue=0, sValue=Devices[1+count].sValue)
+        if key == "brightness":
+            Devices[1+count].Update(nValue=Devices[1+count].nValue, sValue=str(value))
 
 def updateRelay(relay, count):
     for key, value in relay.items():
