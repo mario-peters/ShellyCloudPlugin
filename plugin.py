@@ -25,6 +25,7 @@
                <option label="Shelly 1" value="SHSW-1"/>
                <option label="Shelly 2.5" value="SHSW-25"/>
                <option label="Shelly Dimmer" value="SHDM-1"/>
+               <option label="Shelly RGBW2" value="SHRGBW2"/>
             </options> 
         </param>
     </params>
@@ -36,7 +37,8 @@ import json
 
 class BasePlugin:
  
-    modeRelay = True
+    #mode = None
+    mode = "color"
 
     def __init__(self):
         return
@@ -56,6 +58,8 @@ class BasePlugin:
                     createSHSW25(json_items)
                 elif Parameters["Mode1"] == "SHDM-1":
                     createSHDM1(json_items)
+                elif Parameters["Mode1"] == "SHRGBW2":
+                    createSHRGBW2(self,json_items)
                 else:
                     Domoticz.Log("Type: "+Parameters["Mode1"])
             except requests.exceptions.Timeout as e:
@@ -80,12 +84,33 @@ class BasePlugin:
             url = url + "/relay/" + str(Unit-2)
         if Parameters["Mode1"] == "SHDM-1":
             url = url + "/light/" + str(Unit-1)
+        if Parameters["Mode1"] == "SHRGBW2":
+            if self.mode == "color":
+                url = url +"/color/" + str(Unit-1)
+            if self.mode == "white":
+                url = url +"/white/" + str(Unit-1)
         if str(Command) == "On":
             url = url + "?turn=on"
         elif str(Command) == "Off":
             url = url + "?turn=off"
         elif str(Command) == "Set Level":
             url = url + "?turn=on&brightness=" + str(Level)
+        elif str(Command) == "Set Color":
+            Domoticz.Log(str(Devices[Unit].Color))
+            Domoticz.Log(str(Hue))
+            color_info=json.loads(Hue)
+            r=color_info["r"]
+            g=color_info["g"]
+            b=color_info["b"]
+            m=color_info["m"]
+            cw=color_info["cw"]
+            ww=color_info["ww"]
+            #Domoticz.Log(str(color_info))
+            url = url + "?turn=on"
+            if self.mode == "color":
+                url = url +"&red="+str(r)+"&green="+str(g)+"&blue="+str(b)
+            if self.mode == "white":
+                url = url +"&brightness="+str(Level)
         else:
             Domoticz.Log("Unknown command: "+str(Command))
         Domoticz.Log(url)
@@ -101,6 +126,21 @@ class BasePlugin:
             Devices[Unit].Update(nValue=0,sValue=Devices[Unit].sValue)
         elif str(Command) == "Set Level":
             Devices[Unit].Update(nValue=1,sValue=str(Level))
+        elif str(Command) == "Set Color":
+            Devices[Unit].Update(nValue=1,sValue="1", Color=str(Hue))
+            Domoticz.Log(str(Devices[Unit].Color))
+            #color_info = json.loads(Hue)
+            #color_info.update({'ColorMode': 3})
+            #Domoticz.Log(str(color_info))
+            #color = json.dumps({
+            #  'm': 3, #mode 3: RGB
+            #  'r': 200,
+            #  'g': 255,
+            #  'b': 100
+            #})
+            #Domoticz.Log(str(Devices[Unit].Color))
+            #Devices[Unit].Update(nValue=1,sValue="1", Color=str(color))
+            #Domoticz.Log(str(Devices[Unit].Color))
         else:
             Domoticz.Log("Unknown command: "+str(Command))
 
@@ -123,6 +163,8 @@ class BasePlugin:
                 updateSHSW25(json_request)
             if Parameters["Mode1"] == "SHDM-1":
                 updateSHDM1(json_request)
+            if Parameters["Mode1"] == "SHRGBW2":
+                updateSHRGBW2(self, json_request)
             request_shelly_status.close()
         except requests.exceptions.Timeout as e:
             Domoticz.Error(str(e))
@@ -228,10 +270,35 @@ def createSHDM1(json_items):
     for light in lights:
         name = createLight(light, count)
         meter = {"power":0,"total":0}
-        brightness = {"brithness":0}
         createMeter(name, meter, count)
-        #createBrightness(name, brightness, count)
         count = count + 1
+
+def createSHRGBW2(self,json_items):
+    lights = []
+    for key, value in json_items.items():
+        if key == "lights":
+            lights = value
+        if key == "mode":
+            self.mode = value
+    ison = False
+    for light in lights:
+        if key == "ison":
+            ison = value
+    self.mode="color"
+    if self.mode == "color":
+        Domoticz.Device(Name="RGBW", Unit=1, Used=1, Type=241, Subtype=1).Create()
+        Domoticz.Device(Name="RGBW_power", Unit=11, Used=1, Type=248, Subtype=1).Create()
+        Devices[11].Update(nValue=0, sValue="0")
+        createTotal("RGBW", 0, 0, 0)
+    elif self.mode == "white":
+        Domoticz.Device(Name="White", Unit=1, Used=1, Type=241, Subtype=3).Create()
+        Domoticz.Device(Name="White_power", Unit=11, Used=1, Type=248, Subtype=1).Create()
+        Devices[11].Update(nValue=0, sValue="0")
+        createTotal("White", 0, 0, 0)
+    else:
+        Domoticz.Log("Unknown mode: "+str(self.mode)) 
+    if ison == True:
+        Devices[1].Update(nValue=1, sValue="On")
 
 def createLight(light, count):
     name = ""
@@ -329,6 +396,56 @@ def updateSHDM1(json_request):
         updateLight(light, count)
         updateMeter(meters[count], count)
         count = count + 1
+
+def updateSHRGBW2(self, json_request):
+    lights = []
+    meters = []
+    for key, value in json_request.items():
+        if key == "lights":
+            lights = value
+        if key == "meters":
+            meters = value
+    count = 0
+    for light in lights:
+        updateLight(light, count)
+        updateMeter(meter, count)
+        count = count + 1
+
+def updateRGBLight(self,light,count):
+    updateLight(light, count)
+    m = 0
+    r = 0
+    g = 0
+    b = 0
+    ww = 0
+    cw = 0
+    for key, value in light.items():
+        if key == "mode":
+            if value == "color":
+                m = 3
+            if value == "white":
+                m = 1
+        if key == "red":
+            r = value
+        if key == "green":
+            g = value
+        if key == "blue":
+           b = value
+        if key == "white":
+           ww = value
+        if key == "brightness":
+           ww = value * 255 / 100
+        if key == "cw":
+           cw = value
+    color = json.dumps({
+      'm': m, #mode 3: RGB
+      'r': r,
+      'g': g,
+      'b': b,
+      'ww': ww,
+      'cw': cw
+    })
+    Devices[count].Update(nValue=1,sValue="1", Color=str(color)) 
 
 def updateLight(light, count):
     for key, value in light.items():
