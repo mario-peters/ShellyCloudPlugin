@@ -96,8 +96,8 @@ class BasePlugin:
         elif str(Command) == "Set Level":
             url = url + "?turn=on&brightness=" + str(Level)
         elif str(Command) == "Set Color":
-            Domoticz.Log(str(Devices[Unit].Color))
-            Domoticz.Log(str(Hue))
+            #Domoticz.Log(str(Devices[Unit].Color))
+            #Domoticz.Log(str(Hue))
             color_info=json.loads(Hue)
             r=color_info["r"]
             g=color_info["g"]
@@ -113,7 +113,7 @@ class BasePlugin:
                 url = url +"&brightness="+str(Level)
         else:
             Domoticz.Log("Unknown command: "+str(Command))
-        Domoticz.Log(url)
+        #Domoticz.Log(url)
         try:
             response = requests.get(url,headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
             Domoticz.Debug(response.text)
@@ -128,7 +128,7 @@ class BasePlugin:
             Devices[Unit].Update(nValue=1,sValue=str(Level))
         elif str(Command) == "Set Color":
             Devices[Unit].Update(nValue=1,sValue="1", Color=str(Hue))
-            Domoticz.Log(str(Devices[Unit].Color))
+            #Domoticz.Log(str(Devices[Unit].Color))
             #color_info = json.loads(Hue)
             #color_info.update({'ColorMode': 3})
             #Domoticz.Log(str(color_info))
