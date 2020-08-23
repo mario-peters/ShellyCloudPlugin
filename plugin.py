@@ -12,7 +12,7 @@
             <li>IP Address is the IP Address of the Shelly device. Default value is 127.0.0.1</li>
             <li>Username</li>
             <li>Password</li>
-            <li>Type is the type of Shelly device you want to add. Shelly 1 and Shelly 2.5 (only relay) are currently supported</li>
+            <li>Type is the type of Shelly device you want to add. Shelly 1, Shelly 2.5 (only relay), Shelly Dimmer, Shelly RGBW2 (only color) and Shelly Bulb  are currently supported</li>
         </ul>
         <br/><br/>
     </description>
@@ -26,6 +26,7 @@
                <option label="Shelly 2.5" value="SHSW-25"/>
                <option label="Shelly Dimmer" value="SHDM-1"/>
                <option label="Shelly RGBW2" value="SHRGBW2"/>
+               <option label="Shelly Bulb" value="SHBLB-1"/>
             </options> 
         </param>
     </params>
@@ -58,7 +59,7 @@ class BasePlugin:
                     createSHSW25(json_items)
                 elif Parameters["Mode1"] == "SHDM-1":
                     createSHDM1(json_items)
-                elif Parameters["Mode1"] == "SHRGBW2":
+                elif Parameters["Mode1"] == "SHRGBW2" or Parameters["Mode1"] == "SHBLB-1":
                     createSHRGBW2(self,json_items)
                 else:
                     Domoticz.Log("Type: "+Parameters["Mode1"])
@@ -84,7 +85,7 @@ class BasePlugin:
             url = url + "/relay/" + str(Unit-2)
         if Parameters["Mode1"] == "SHDM-1":
             url = url + "/light/" + str(Unit-1)
-        if Parameters["Mode1"] == "SHRGBW2":
+        if Parameters["Mode1"] == "SHRGBW2" or Parameters["Mode1"] == "SHBLB-1":
             if self.mode == "color":
                 url = url +"/color/" + str(Unit-1)
             if self.mode == "white":
@@ -94,7 +95,10 @@ class BasePlugin:
         elif str(Command) == "Off":
             url = url + "?turn=off"
         elif str(Command) == "Set Level":
-            url = url + "?turn=on&brightness=" + str(Level)
+            if self.mode == "color":
+                url = url + "?turn=on&gain=" + str(Level)
+            elif self.mode == "white":
+                url = url + "?turn=on&brightness=" + str(Level)
         elif str(Command) == "Set Color":
             #Domoticz.Log(str(Devices[Unit].Color))
             #Domoticz.Log(str(Hue))
@@ -108,12 +112,12 @@ class BasePlugin:
             #Domoticz.Log(str(color_info))
             url = url + "?turn=on"
             if self.mode == "color":
-                url = url +"&red="+str(r)+"&green="+str(g)+"&blue="+str(b)
+                url = url +"&red="+str(r)+"&green="+str(g)+"&blue="+str(b)+"&white="+str(cw)+"&gain="+str(Level)
             if self.mode == "white":
-                url = url +"&brightness="+str(Level)
+                url = url +"&white="+str(cw)+"&brightness="+str(Level)
         else:
             Domoticz.Log("Unknown command: "+str(Command))
-        #Domoticz.Log(url)
+        Domoticz.Log("url: "+url)
         try:
             response = requests.get(url,headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
             Domoticz.Debug(response.text)
@@ -127,7 +131,11 @@ class BasePlugin:
         elif str(Command) == "Set Level":
             Devices[Unit].Update(nValue=1,sValue=str(Level))
         elif str(Command) == "Set Color":
-            Devices[Unit].Update(nValue=1,sValue="1", Color=str(Hue))
+            if self.mode == "color":
+                #Devices[Unit].Update(nValue=1,sValue=str(Level), Color=str(Hue))
+                Devices[Unit].Update(nValue=1,sValue=str(Level), Color=json.dumps(Hue))
+            else:
+                Devices[Unit].Update(nValue=1,sValue=str(Level))
             #Domoticz.Log(str(Devices[Unit].Color))
             #color_info = json.loads(Hue)
             #color_info.update({'ColorMode': 3})
@@ -163,7 +171,7 @@ class BasePlugin:
                 updateSHSW25(json_request)
             if Parameters["Mode1"] == "SHDM-1":
                 updateSHDM1(json_request)
-            if Parameters["Mode1"] == "SHRGBW2":
+            if Parameters["Mode1"] == "SHRGBW2" or Parameters["Mode1"] == "SHBLB-1":
                 updateSHRGBW2(self, json_request)
             request_shelly_status.close()
         except requests.exceptions.Timeout as e:
@@ -408,7 +416,7 @@ def updateSHRGBW2(self, json_request):
     count = 0
     for light in lights:
         updateLight(light, count)
-        updateMeter(meter, count)
+        updateMeter(meters[count], count)
         count = count + 1
 
 def updateRGBLight(self,light,count):
