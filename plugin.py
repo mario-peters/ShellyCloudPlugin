@@ -12,7 +12,7 @@
             <li>IP Address is the IP Address of the Shelly device. Default value is 127.0.0.1</li>
             <li>Username</li>
             <li>Password</li>
-            <li>Type is the type of Shelly device you want to add. Shelly 1, Shelly 2.5 (only relay), Shelly Dimmer, Shelly RGBW2 (only color) and Shelly Bulb  are currently supported</li>
+            <li>Type is the type of Shelly device you want to add. Shelly 1, Shelly 2.5 (only relay), Shelly Dimmer, Shelly RGBW2 (only color), Shelly Bulb and Shelly Door/Window 2 are currently supported</li>
         </ul>
         <br/><br/>
     </description>
@@ -27,6 +27,7 @@
                <option label="Shelly Dimmer" value="SHDM-1"/>
                <option label="Shelly RGBW2" value="SHRGBW2"/>
                <option label="Shelly Bulb" value="SHBLB-1"/>
+               <option label="Shelly Door/Window 2" value="SHDW-2"/>
             </options> 
         </param>
     </params>
@@ -48,23 +49,26 @@ class BasePlugin:
         Domoticz.Log("onStart called")
         Domoticz.Heartbeat(30)
         if len(Devices) == 0:
-            headers = {'content-type':'application/json'}
-            try:
-                response_shelly = requests.get("http://"+Parameters["Address"]+"/settings",headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
-                json_items = json.loads(response_shelly.text)
-                response_shelly.close()
-                if Parameters["Mode1"] == "SHSW-1":
-                    createSHSW1(json_items)
-                elif Parameters["Mode1"] == "SHSW-25":
-                    createSHSW25(json_items)
-                elif Parameters["Mode1"] == "SHDM-1":
-                    createSHDM1(json_items)
-                elif Parameters["Mode1"] == "SHRGBW2" or Parameters["Mode1"] == "SHBLB-1":
-                    createSHRGBW2(self,json_items)
-                else:
-                    Domoticz.Log("Type: "+Parameters["Mode1"])
-            except requests.exceptions.Timeout as e:
-                Domoticz.Error(str(e))
+            if Parameters["Mode1"] == "SHDW-2":
+                createSHDW2()
+            else:
+                headers = {'content-type':'application/json'}
+                try:
+                    response_shelly = requests.get("http://"+Parameters["Address"]+"/settings",headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
+                    json_items = json.loads(response_shelly.text)
+                    response_shelly.close()
+                    if Parameters["Mode1"] == "SHSW-1":
+                        createSHSW1(json_items)
+                    elif Parameters["Mode1"] == "SHSW-25":
+                        createSHSW25(json_items)
+                    elif Parameters["Mode1"] == "SHDM-1":
+                        createSHDM1(json_items)
+                    elif Parameters["Mode1"] == "SHRGBW2" or Parameters["Mode1"] == "SHBLB-1":
+                        createSHRGBW2(self,json_items)
+                    else:
+                        Domoticz.Log("Type: "+Parameters["Mode1"])
+                except requests.exceptions.Timeout as e:
+                    Domoticz.Error(str(e))
 
     def onStop(self):
         Domoticz.Log("onStop called")
@@ -77,53 +81,54 @@ class BasePlugin:
 
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Log("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
-        headers = {'content-type':'application/json'}
-        url = "http://"+Parameters["Address"]
-        if Parameters["Mode1"] == "SHSW-1":
-            url = url + "/relay/" + str(Unit-1)
-        if Parameters["Mode1"] == "SHSW-25":
-            url = url + "/relay/" + str(Unit-2)
-        if Parameters["Mode1"] == "SHDM-1":
-            url = url + "/light/" + str(Unit-1)
-        if Parameters["Mode1"] == "SHRGBW2" or Parameters["Mode1"] == "SHBLB-1":
-            if self.mode == "color":
-                url = url +"/color/" + str(Unit-1)
-            if self.mode == "white":
-                url = url +"/white/" + str(Unit-1)
-        if str(Command) == "On":
-            url = url + "?turn=on"
-        elif str(Command) == "Off":
-            url = url + "?turn=off"
-        elif str(Command) == "Set Level":
-            if self.mode == "color":
-                url = url + "?turn=on&gain=" + str(Level)
-            elif self.mode == "white":
-                url = url + "?turn=on&brightness=" + str(Level)
-        elif str(Command) == "Set Color":
-            #Domoticz.Log(str(Devices[Unit].Color))
-            #Domoticz.Log(str(Hue))
-            color_info=json.loads(Hue)
-            r=color_info["r"]
-            g=color_info["g"]
-            b=color_info["b"]
-            m=color_info["m"]
-            cw=color_info["cw"]
-            ww=color_info["ww"]
-            #Domoticz.Log(str(color_info))
-            url = url + "?turn=on"
-            if self.mode == "color":
-                url = url +"&red="+str(r)+"&green="+str(g)+"&blue="+str(b)+"&white="+str(cw)+"&gain="+str(Level)
-            if self.mode == "white":
-                url = url +"&white="+str(cw)+"&brightness="+str(Level)
-        else:
-            Domoticz.Log("Unknown command: "+str(Command))
-        Domoticz.Log("url: "+url)
-        try:
-            response = requests.get(url,headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
-            Domoticz.Debug(response.text)
-            response.close()
-        except requests.exceptions.Timeout as e:
-            Domoticz.Error(str(e))
+        if Parameters["Mode1"] != "SHDW-2":
+            headers = {'content-type':'application/json'}
+            url = "http://"+Parameters["Address"]
+            if Parameters["Mode1"] == "SHSW-1":
+                url = url + "/relay/" + str(Unit-1)
+            if Parameters["Mode1"] == "SHSW-25":
+                url = url + "/relay/" + str(Unit-2)
+            if Parameters["Mode1"] == "SHDM-1":
+                url = url + "/light/" + str(Unit-1)
+            if Parameters["Mode1"] == "SHRGBW2" or Parameters["Mode1"] == "SHBLB-1":
+                if self.mode == "color":
+                    url = url +"/color/" + str(Unit-1)
+                if self.mode == "white":
+                    url = url +"/white/" + str(Unit-1)
+            if str(Command) == "On":
+                url = url + "?turn=on"
+            elif str(Command) == "Off":
+                url = url + "?turn=off"
+            elif str(Command) == "Set Level":
+                if self.mode == "color":
+                    url = url + "?turn=on&gain=" + str(Level)
+                elif self.mode == "white":
+                    url = url + "?turn=on&brightness=" + str(Level)
+            elif str(Command) == "Set Color":
+                Domoticz.Debug(str(Devices[Unit].Color))
+                Domoticz.Debug(str(Hue))
+                color_info=json.loads(Hue)
+                r=color_info["r"]
+                g=color_info["g"]
+                b=color_info["b"]
+                m=color_info["m"]
+                cw=color_info["cw"]
+                ww=color_info["ww"]
+                Domoticz.Debug(str(color_info))
+                url = url + "?turn=on"
+                if self.mode == "color":
+                    url = url +"&red="+str(r)+"&green="+str(g)+"&blue="+str(b)+"&white="+str(cw)+"&gain="+str(Level)
+                if self.mode == "white":
+                    url = url +"&white="+str(cw)+"&brightness="+str(Level)
+            else:
+                Domoticz.Log("Unknown command: "+str(Command))
+            Domoticz.Log("url: "+url)
+            try:
+                response = requests.get(url,headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
+                Domoticz.Debug(response.text)
+                response.close()
+            except requests.exceptions.Timeout as e:
+                Domoticz.Error(str(e))
         if str(Command) == "On":
             Devices[Unit].Update(nValue=1,sValue=Devices[Unit].sValue)
         elif str(Command) == "Off":
@@ -136,19 +141,6 @@ class BasePlugin:
                 Devices[Unit].Update(nValue=1,sValue=str(Level), Color=json.dumps(Hue))
             else:
                 Devices[Unit].Update(nValue=1,sValue=str(Level))
-            #Domoticz.Log(str(Devices[Unit].Color))
-            #color_info = json.loads(Hue)
-            #color_info.update({'ColorMode': 3})
-            #Domoticz.Log(str(color_info))
-            #color = json.dumps({
-            #  'm': 3, #mode 3: RGB
-            #  'r': 200,
-            #  'g': 255,
-            #  'b': 100
-            #})
-            #Domoticz.Log(str(Devices[Unit].Color))
-            #Devices[Unit].Update(nValue=1,sValue="1", Color=str(color))
-            #Domoticz.Log(str(Devices[Unit].Color))
         else:
             Domoticz.Log("Unknown command: "+str(Command))
 
@@ -160,22 +152,23 @@ class BasePlugin:
 
     def onHeartbeat(self):
         Domoticz.Log("onHeartbeat called")
-        headers = {'content-type':'application/json'}
-        try:
-            request_shelly_status = requests.get("http://"+Parameters["Address"]+"/status",headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
-            Domoticz.Debug(request_shelly_status.text)
-            json_request = json.loads(request_shelly_status.text)
-            if Parameters["Mode1"] == "SHSW-1":
-                updateSHSW1(json_request)
-            if Parameters["Mode1"] == "SHSW-25":
-                updateSHSW25(json_request)
-            if Parameters["Mode1"] == "SHDM-1":
-                updateSHDM1(json_request)
-            if Parameters["Mode1"] == "SHRGBW2" or Parameters["Mode1"] == "SHBLB-1":
-                updateSHRGBW2(self, json_request)
-            request_shelly_status.close()
-        except requests.exceptions.Timeout as e:
-            Domoticz.Error(str(e))
+        if Parameters["Mode1"] != "SHDW-2":
+            headers = {'content-type':'application/json'}
+            try:
+                request_shelly_status = requests.get("http://"+Parameters["Address"]+"/status",headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
+                Domoticz.Debug(request_shelly_status.text)
+                json_request = json.loads(request_shelly_status.text)
+                if Parameters["Mode1"] == "SHSW-1":
+                    updateSHSW1(json_request)
+                if Parameters["Mode1"] == "SHSW-25":
+                    updateSHSW25(json_request)
+                if Parameters["Mode1"] == "SHDM-1":
+                    updateSHDM1(json_request)
+                if Parameters["Mode1"] == "SHRGBW2" or Parameters["Mode1"] == "SHBLB-1":
+                    updateSHRGBW2(self, json_request)
+                request_shelly_status.close()
+            except requests.exceptions.Timeout as e:
+                Domoticz.Error(str(e))
 
 global _plugin
 _plugin = BasePlugin()
@@ -307,6 +300,9 @@ def createSHRGBW2(self,json_items):
         Domoticz.Log("Unknown mode: "+str(self.mode)) 
     if ison == True:
         Devices[1].Update(nValue=1, sValue="On")
+
+def createSHDW2():
+    Domoticz.Device(Name="SHDW2", Unit=1, Used=1, Type=244, Subtype=73, Switchtype=11).Create()
 
 def createLight(light, count):
     name = ""
