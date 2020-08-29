@@ -237,7 +237,7 @@ def createSHSW25(json_items):
     relays = None
     rollers = None
     mode = None
-    meters = None
+    num_meters = None
     for key, value in json_items.items():
         if key == "relays":
             relays = value
@@ -245,14 +245,17 @@ def createSHSW25(json_items):
             rollers = value
         if key == "mode":
             mode = value
-        if key == "meters":
-            meters = value
+        #if key == "meters":
+            #meters = value
+        if key == "num_meters":
+            num_meters = value
     Domoticz.Device("Temperature", Unit=1, Used=1, TypeName="Temperature").Create()
     if mode == "relay":
        count = 1
        for relay in relays:
            name = createRelay(relay, count)
-           meter = meters[1-count]
+           #meter = meters[1-count]
+           meter = {"power":0,"total":0}
            createMeter(name, meter, count)
            count = count + 1
 
