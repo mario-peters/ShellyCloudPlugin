@@ -100,9 +100,9 @@ class BasePlugin:
             elif str(Command) == "Off":
                 url = url + "?turn=off"
             elif str(Command) == "Set Level":
-                if self.mode == "color":
+                if self.mode == "color" and Parameters["Mode1"] != "SHDM-1":
                     url = url + "?turn=on&gain=" + str(Level)
-                elif self.mode == "white":
+                elif self.mode == "white" or Parameters["Mode1"] == "SHDM-1":
                     url = url + "?turn=on&brightness=" + str(Level)
             elif str(Command) == "Set Color":
                 Domoticz.Debug(str(Devices[Unit].Color))
