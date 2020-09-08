@@ -12,3 +12,4 @@ Currently the following Shelly devices are supported
 * Shelly RBGW2 (only Color)
 * Shelly Bulb
 * Shelly Door/Window 2
+* Shelly PlugS
