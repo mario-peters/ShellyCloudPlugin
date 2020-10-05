@@ -7,6 +7,7 @@ You can find th specific configuration and ToDo's on the Wiki page.
 # Features
 Currently the following Shelly devices are supported
 * Shelly 1
+* Shelly PM
 * Shelly 2.5 (only relay)
 * Shelly Dimmer
 * Shelly RBGW2 (only Color)
