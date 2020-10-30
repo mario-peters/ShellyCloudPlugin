@@ -61,7 +61,7 @@ class BasePlugin:
                     if Parameters["Mode1"] == "SHSW-1":
                         createSHSW1(json_items)
                     elif Parameters["Mode1"] == "SHSW-25":
-                        createSHSW25(json_items)
+                        createSHSW25(self,json_items)
                     elif Parameters["Mode1"] == "SHDM-1":
                         createSHDM1(json_items)
                     elif Parameters["Mode1"] == "SHRGBW2" or Parameters["Mode1"] == "SHBLB-1":
@@ -90,7 +90,10 @@ class BasePlugin:
             if Parameters["Mode1"] == "SHSW-1" or Parameters["Mode1"] == "SHPLG-S":
                 url = url + "/relay/" + str(Unit-1)
             if Parameters["Mode1"] == "SHSW-25":
-                url = url + "/relay/" + str(Unit-2)
+                if self.mode == "relay":
+                    url = url + "/relay/" + str(Unit-2)
+                elif self.mode == "roller":
+                    url = url + "/roller/" + str(Unit-2)
             if Parameters["Mode1"] == "SHDM-1":
                 url = url + "/light/" + str(Unit-1)
             if Parameters["Mode1"] == "SHRGBW2" or Parameters["Mode1"] == "SHBLB-1":
@@ -99,14 +102,22 @@ class BasePlugin:
                 if self.mode == "white":
                     url = url +"/white/" + str(Unit-1)
             if str(Command) == "On":
-                url = url + "?turn=on"
+                if self.mode == "roller":
+                    url = url + "?go=open"
+                else:
+                    url = url + "?turn=on"
             elif str(Command) == "Off":
-                url = url + "?turn=off"
+                if self.mode == "roller":
+                    url = url + "?go=close"
+                else:
+                    url = url + "?turn=off"
             elif str(Command) == "Set Level":
                 if self.mode == "color" and Parameters["Mode1"] != "SHDM-1":
                     url = url + "?turn=on&gain=" + str(Level)
                 elif self.mode == "white" or Parameters["Mode1"] == "SHDM-1":
                     url = url + "?turn=on&brightness=" + str(Level)
+                elif self.mode == "roller":
+                    url = url + "?go=topos&roller_pos="+str(Level)
             elif str(Command) == "Set Color":
                 Domoticz.Debug(str(Devices[Unit].Color))
                 Domoticz.Debug(str(Hue))
@@ -137,7 +148,10 @@ class BasePlugin:
         elif str(Command) == "Off":
             Devices[Unit].Update(nValue=0,sValue="Off")
         elif str(Command) == "Set Level":
-            Devices[Unit].Update(nValue=1,sValue=str(Level))
+            if self.mode == "roller":
+                Devices[Unit].Update(nValue=2,sValue=str(Level))
+            else:
+                Devices[Unit].Update(nValue=1,sValue=str(Level))
         elif str(Command) == "Set Color":
             if self.mode == "color":
                 #Devices[Unit].Update(nValue=1,sValue=str(Level), Color=str(Hue))
@@ -164,7 +178,8 @@ class BasePlugin:
                 if Parameters["Mode1"] == "SHSW-1" or Parameters["Mode1"] == "SHPLG-S":
                     updateSHSW1(json_request)
                 if Parameters["Mode1"] == "SHSW-25":
-                    updateSHSW25(json_request)
+                    if self.mode == "relay":
+                        updateSHSW25(json_request)
                 if Parameters["Mode1"] == "SHDM-1":
                     updateSHDM1(json_request)
                 if Parameters["Mode1"] == "SHRGBW2" or Parameters["Mode1"] == "SHBLB-1":
@@ -236,24 +251,30 @@ def createSHSW1(json_items):
                 createPower(name, value, count)
         count = count + 1
 
-def createSHSW25(json_items):
+def createSHSW25(self,json_items):
     relays = None
     rollers = None
-    mode = None
+    #mode = None
     num_meters = None
+    hostname = ""
     for key, value in json_items.items():
         if key == "relays":
             relays = value
         if key == "rollers":
             rollers = value
         if key == "mode":
-            mode = value
+            self.mode = value
         #if key == "meters":
             #meters = value
-        if key == "num_meters":
-            num_meters = value
+        #if key == "num_meters":
+            #num_meters = value
+        if key == "device":
+            for q, v in value.items():
+                if q == "hostname":
+                    hostname = v
     Domoticz.Device("Temperature", Unit=1, Used=1, TypeName="Temperature").Create()
-    if mode == "relay":
+    #self.mode="roller"
+    if self.mode == "relay":
        count = 1
        for relay in relays:
            name = createRelay(relay, count)
@@ -261,6 +282,11 @@ def createSHSW25(json_items):
            meter = {"power":0,"total":0}
            createMeter(name, meter, count)
            count = count + 1
+    elif self.mode == "roller":
+        count = 1
+        for roller in rollers:
+            createRoller(hostname, count)
+            count = count + 1
 
 def createSHPLG(json_items):
     relays = None
@@ -352,6 +378,9 @@ def createRelay(relay, count):
     if ison == True:
         Devices[1+count].Update(nValue=1, sValue="On")
     return name
+
+def createRoller(hostname, count):
+    Domoticz.Device(Name=hostname+"_Roller"+str(count), Unit=1+count, Used=1, Type=244, Subtype=73, Switchtype=13).Create()
 
 def createMeter(name, meter, count):
     power = 0.0
