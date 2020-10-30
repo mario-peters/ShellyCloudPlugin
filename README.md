@@ -8,9 +8,9 @@ You can find th specific configuration and ToDo's on the Wiki page.
 Currently the following Shelly devices are supported
 * Shelly 1
 * Shelly PM
-* Shelly 2.5 (only relay)
+* Shelly 2.5 (relay and roller)
 * Shelly Dimmer
-* Shelly RBGW2 (only Color)
+* Shelly RGBW2 (only Color and White)
 * Shelly Bulb
 * Shelly Door/Window 2
 * Shelly PlugS
