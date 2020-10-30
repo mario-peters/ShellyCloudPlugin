@@ -12,7 +12,7 @@
             <li>IP Address is the IP Address of the Shelly device. Default value is 127.0.0.1</li>
             <li>Username</li>
             <li>Password</li>
-            <li>Type is the type of Shelly device you want to add. Shelly 1, Shelly 2.5 (only relay), Shelly Dimmer, Shelly RGBW2 (only color), Shelly Bulb, Shelly Door/Window 2 and Shelly Plug-S are currently supported</li>
+            <li>Type is the type of Shelly device you want to add. Shelly 1, Shelly PM, Shelly 2.5 (only relay), Shelly Dimmer, Shelly RGBW2 (only color), Shelly Bulb, Shelly Door/Window 2 and Shelly Plug-S are currently supported</li>
         </ul>
         <br/><br/>
     </description>
@@ -23,6 +23,7 @@
         <param field="Mode1" label="Type" width="200px" required="true">
             <options>
                <option label="Shelly 1" value="SHSW-1"/>
+               <option label="Shelly PM" value="SHSW-PM"/>
                <option label="Shelly 2.5" value="SHSW-25"/>
                <option label="Shelly Dimmer" value="SHDM-1"/>
                <option label="Shelly RGBW2" value="SHRGBW2"/>
@@ -58,7 +59,7 @@ class BasePlugin:
                     response_shelly = requests.get("http://"+Parameters["Address"]+"/settings",headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
                     json_items = json.loads(response_shelly.text)
                     response_shelly.close()
-                    if Parameters["Mode1"] == "SHSW-1":
+                    if Parameters["Mode1"] == "SHSW-1" or Parameters["Mode1"] == "SHSW-PM":
                         createSHSW1(json_items)
                     elif Parameters["Mode1"] == "SHSW-25":
                         createSHSW25(self,json_items)
@@ -87,7 +88,7 @@ class BasePlugin:
         if Parameters["Mode1"] != "SHDW-2":
             headers = {'content-type':'application/json'}
             url = "http://"+Parameters["Address"]
-            if Parameters["Mode1"] == "SHSW-1" or Parameters["Mode1"] == "SHPLG-S":
+            if Parameters["Mode1"] == "SHSW-1" or Parameters["Mode1"] == "SHPLG-S" or Parameters["Mode1"] == "SHSW-PM":
                 url = url + "/relay/" + str(Unit-1)
             if Parameters["Mode1"] == "SHSW-25":
                 if self.mode == "relay":
@@ -175,7 +176,7 @@ class BasePlugin:
                 request_shelly_status = requests.get("http://"+Parameters["Address"]+"/status",headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
                 Domoticz.Debug(request_shelly_status.text)
                 json_request = json.loads(request_shelly_status.text)
-                if Parameters["Mode1"] == "SHSW-1" or Parameters["Mode1"] == "SHPLG-S":
+                if Parameters["Mode1"] == "SHSW-1" or Parameters["Mode1"] == "SHPLG-S" or Parameters["Mode1"] == "SHSW-PM":
                     updateSHSW1(json_request)
                 if Parameters["Mode1"] == "SHSW-25":
                     if self.mode == "relay":
@@ -246,9 +247,8 @@ def createSHSW1(json_items):
     count = 0
     for relay in relays:
         name = createRelay(relay, count)
-        for key, value in relay.items():
-            if key == "power":
-                createPower(name, value, count)
+        meter={"power":0,"total":0}
+        createMeter(name, meter, count)
         count = count + 1
 
 def createSHSW25(self,json_items):
