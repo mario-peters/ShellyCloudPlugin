@@ -12,7 +12,7 @@
             <li>IP Address is the IP Address of the Shelly device. Default value is 127.0.0.1</li>
             <li>Username</li>
             <li>Password</li>
-            <li>Type is the type of Shelly device you want to add. Shelly 1, Shelly PM, Shelly 2.5 (only relay), Shelly Dimmer, Shelly RGBW2 (only color), Shelly Bulb, Shelly Door/Window 2 and Shelly Plug-S are currently supported</li>
+            <li>Type is the type of Shelly device you want to add. Shelly 1, Shelly PM, Shelly 2.5 (relay and roller), Shelly Dimmer, Shelly RGBW2 (color and white), Shelly Bulb, Shelly Door/Window 2 and Shelly Plug-S are currently supported</li>
         </ul>
         <br/><br/>
     </description>
