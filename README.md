@@ -14,3 +14,7 @@ Currently the following Shelly devices are supported
 * Shelly Bulb
 * Shelly Door/Window 2
 * Shelly PlugS
+
+# Changelog
+* v.1.0.1 Small fix for switching on/off Shelly 2.5
+* v.1.0.0 Initial version
