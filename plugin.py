@@ -3,7 +3,7 @@
 # Author: Mario Peters
 #
 """
-<plugin key="ShellyCloudPlugin" name="Shelly Cloud Plugin" author="Mario Peters" version="1.0.0" wikilink="https://github.com/mario-peters/ShellyCloudPlugin/wiki" externallink="https://github.com/mario-peters/ShellyCloudPlugin">
+<plugin key="ShellyCloudPlugin" name="Shelly Cloud Plugin" author="Mario Peters" version="1.0.1" wikilink="https://github.com/mario-peters/ShellyCloudPlugin/wiki" externallink="https://github.com/mario-peters/ShellyCloudPlugin">
     <description>
         <h2>Shelly Cloud Plugin</h2><br/>
         Plugin for controlling Shelly devices.
@@ -50,15 +50,15 @@ class BasePlugin:
     def onStart(self):
         Domoticz.Log("onStart called")
         Domoticz.Heartbeat(30)
-        if len(Devices) == 0:
-            if Parameters["Mode1"] == "SHDW-2":
-                createSHDW2()
-            else:
-                headers = {'content-type':'application/json'}
-                try:
-                    response_shelly = requests.get("http://"+Parameters["Address"]+"/settings",headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
-                    json_items = json.loads(response_shelly.text)
-                    response_shelly.close()
+        try:
+            headers = {'content-type':'application/json'}
+            response_shelly = requests.get("http://"+Parameters["Address"]+"/settings", headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
+            json_items = json.loads(response_shelly.text)
+            response_shelly.close()
+            if len(Devices) == 0:
+                if Parameters["Mode1"] == "SHDW-2":
+                    createSHDW2()
+                else:
                     if Parameters["Mode1"] == "SHSW-1" or Parameters["Mode1"] == "SHSW-PM":
                         createSHSW1(json_items)
                     elif Parameters["Mode1"] == "SHSW-25":
@@ -71,8 +71,13 @@ class BasePlugin:
                         createSHPLG(json_items)
                     else:
                         Domoticz.Log("Type: "+Parameters["Mode1"])
-                except requests.exceptions.Timeout as e:
-                    Domoticz.Error(str(e))
+            else:
+                if Parameters["Mode1"] == "SHSW-25":
+                    for key, value in json_items.items():
+                        if key == "mode":
+                            self.mode = value
+        except requests.exceptions.Timeout as e:
+            Domoticz.Error(str(e))
 
     def onStop(self):
         Domoticz.Log("onStop called")
