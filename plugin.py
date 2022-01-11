@@ -123,7 +123,7 @@ class BasePlugin:
                 elif self.mode == "white" or Parameters["Mode1"] == "SHDM-1":
                     url = url + "?turn=on&brightness=" + str(Level)
                 elif self.mode == "roller":
-                    url = url + "?go=topos&roller_pos="+str(Level)
+                    url = url + "?go=to_pos&roller_pos="+str(Level)
             elif str(Command) == "Set Color":
                 Domoticz.Debug(str(Devices[Unit].Color))
                 Domoticz.Debug(str(Hue))
