@@ -30,6 +30,11 @@
                <option label="Shelly Bulb" value="SHBLB-1"/>
                <option label="Shelly Door/Window 2" value="SHDW-2"/>
                <option label="Shelly Plug" value="SHPLG-S"/>
+               <option label="Shelly TRV" value="SHTRV-01"/>
+               <option label="Shelly Gas" value="SHGS-1"/>
+               <option label="TODO: Shelly 3EM" value="SHEM-3"/>
+               <option label="TODO: Shelly EM" value="SHEM"/>
+               <option label="TODO: Shelly Flood" value="SHWT-1"/>
             </options> 
         </param>
     </params>
@@ -43,6 +48,11 @@ class BasePlugin:
  
     #mode = None
     mode = "color"
+    SHELLY_TRV="SHTRV-01"
+    SHELLY_EM="SHEM"
+    SHELLY_3EM="SHEM-3"
+    SHELLY_GAS="SHGS-1"
+    SHELLY_FLOOD="SHWT-1"
 
     def __init__(self):
         return
@@ -69,6 +79,10 @@ class BasePlugin:
                         createSHRGBW2(self,json_items)
                     elif Parameters["Mode1"] == "SHPLG-S":
                         createSHPLG(json_items)
+                    elif Parameters["Mode1"] == self.SHELLY_TRV:
+                        createTRV(json_items)
+                    elif Parameters["Mode1"] == self.SHELLY_GAS:
+                        createGAS()
                     else:
                         Domoticz.Log("Type: "+Parameters["Mode1"])
             else:
@@ -90,9 +104,10 @@ class BasePlugin:
 
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Log("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
-        if Parameters["Mode1"] != "SHDW-2":
-            headers = {'content-type':'application/json'}
-            url = "http://"+Parameters["Address"]
+        url = "http://"+Parameters["Address"]
+        headers = {'content-type':'application/json'}
+
+        if Parameters["Mode1"] != "SHDW-2" and Parameters["Mode1"] != self.SHELLY_TRV and Parameters["Mode1"] != self.SHELLY_GAS:
             if Parameters["Mode1"] == "SHSW-1" or Parameters["Mode1"] == "SHPLG-S" or Parameters["Mode1"] == "SHSW-PM":
                 url = url + "/relay/" + str(Unit-1)
             if Parameters["Mode1"] == "SHSW-25":
@@ -142,13 +157,42 @@ class BasePlugin:
                     url = url +"&white="+str(cw)+"&brightness="+str(Level)
             else:
                 Domoticz.Log("Unknown command: "+str(Command))
-            Domoticz.Log("url: "+url)
-            try:
-                response = requests.get(url,headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
-                Domoticz.Debug(response.text)
-                response.close()
-            except requests.exceptions.Timeout as e:
-                Domoticz.Error(str(e))
+        elif Parameters["Mode1"] == self.SHELLY_TRV:
+            if str(Command) == "Set Level":
+                if Unit == 1:
+                    if Level > 0:
+                        url = url + "?schedule=true&schedule_profile="+str(Level/10)[0]
+                elif Unit == 3:
+                    url = url + "/settings/thermostats/0?target_t="+str(Level)
+            elif str(Command) == "On":
+                if Unit == 3:
+                    url = url + "/settings/thermostats/0?schedule=true"
+                elif Unit == 4:
+                    url = url + "/settings?child_lock=true"
+            elif str(Command) == "Off":
+                if Unit == 3:
+                    url = url + "/settings/thermostats/0?schedule=false"
+                elif Unit == 4:
+                    url = url + "/settings?child_lock=false"
+            else:
+                Domoticz.Log("Unknown command: "+str(Command))
+        elif Parameters["Mode1"] == self.SHELLY_GAS:
+            if str(Command) == "On":
+                if Unit == 3:
+                    url = url + "/self_test"
+                elif Unit == 4:
+                    url = url + "/unmute"
+            if str(Command) == "Off":
+                if Unit == 4:
+                    url = url + "/mute"
+        Domoticz.Log("url: "+url)
+        try:
+            response = requests.get(url,headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
+            Domoticz.Debug(response.text)
+            response.close()
+        except requests.exceptions.Timeout as e:
+            Domoticz.Error(str(e))
+
         if str(Command) == "On":
             Devices[Unit].Update(nValue=1,sValue="On")
         elif str(Command) == "Off":
@@ -190,6 +234,10 @@ class BasePlugin:
                     updateSHDM1(json_request)
                 if Parameters["Mode1"] == "SHRGBW2" or Parameters["Mode1"] == "SHBLB-1":
                     updateSHRGBW2(self, json_request)
+                if Parameters["Mode1"] == self.SHELLY_TRV:
+                    updateTRV(self, json_request)
+                if Parameters["Mode1"] == self.SHELLY_GAS:
+                    updateGAS(self, json_request)
                 request_shelly_status.close()
             except requests.exceptions.Timeout as e:
                 Domoticz.Error(str(e))
@@ -243,6 +291,36 @@ def DumpConfigToLog():
         Domoticz.Debug("Device sValue:   '" + Devices[x].sValue + "'")
         Domoticz.Debug("Device LastLevel: " + str(Devices[x].LastLevel))
     return
+
+def createGAS():
+    Domoticz.Device(Name="Alarm", Unit=1, Type=243, Subtype=22, Used=1).Create()
+    Options={"ValueUnits": "ppm"}
+    Domoticz.Device(Name="Concentration", Unit=2, Type=243, Subtype=33, Switchtype=3, Used=1, Options=Options).Create()
+    Domoticz.Device(Name="Self-test", Unit=3, Type=244, Subtype=73, Switchtype=9, Used=1).Create()
+    Domoticz.Device(Name="(Un)mute alarm", Unit=4, Type=244, Subtype=73, Switchtype=0, Used=1).Create()
+
+
+def createTRV(json_items):
+    json_items = {"thermostats": {"schedule_profile_names": ["Livingroom","Livingroom 1","Bedroom","Bedroom 1","Holiday"]}}
+    for key, value in json_items.items():
+        if key == "thermostats":
+            schedule_profile_names = "---|"
+            for key_thermostats, value_thermostats in value.items():
+                if key_thermostats == "schedule_profile_names":
+                    for item in value_thermostats:
+                        schedule_profile_names += str(item) + "|"
+            if schedule_profile_names != "":
+                levelactions = ""
+                count = 0
+                schedule_profile_names = schedule_profile_names[:-1]
+                for count in range(0,schedule_profile_names.count("|")):
+                    levelactions += "|"
+                Options = {"LevelActions": levelactions, "LevelNames": schedule_profile_names, "LevelOffHidden": "false", "SelectorStyle": "1"}
+                Domoticz.Device(Name="Schedule Profile Names", Unit=1, Used=1, TypeName="Selector Switch", Options=Options).Create() 
+    Domoticz.Device(Name="Temperature", Unit=2, Used=1, Type=80, Subtype=5).Create()
+    Domoticz.Device(Name="Setpoint", Unit=3, Type=242, Subtype=1, Used=1).Create()
+    Domoticz.Device(Name="Child lock", Unit=4, Type=244, Subtype=73, Switchtype=0, Used=1).Create()
+
 
 def createSHSW1(json_items):
     relays = None
@@ -407,6 +485,65 @@ def createTotal(name, power, value, count):
     total = total/60
     total = int(total)
     Devices[21+count].Update(nValue=0,sValue=str(power)+";"+str(total))
+
+def updateGAS(self, json_request):
+    json_request0 = {"gas_sensor": {"alarm_state": "none"}, "concentration": {"ppm": 100}}
+    json_request1 = {"gas_sensor": {"alarm_state": "mild"}, "concentration": {"ppm": 200}}
+    json_request2 = {"gas_sensor": {"alarm_state": "heavy"}, "concentration": {"ppm": 300}}
+    json_request3 = {"gas_sensor": {"alarm_state": "test"}, "concentration": {"ppm": 400}}
+    json_request4 = {"gas_sensor": {"alarm_state": "unknown"}, "concentration": {"ppm": 500}}
+    #json_request = json_request2
+    #Domoticz.Log(str(json_request))
+    for key, value in json_request.items():
+        if key == "gas_sensor":
+            for key_gs, value_gs in value.items():
+                if key_gs == "alarm_state":
+                    if value_gs == "none":
+                        Devices[1].Update(nValue=1,sValue="None")
+                    elif value_gs == "mild":
+                        Devices[1].Update(nValue=3,sValue="Mild")
+                    elif value_gs == "heavy":
+                        Devices[1].Update(nValue=4,sValue="Heavy")
+                        Devices[4].Update(nValue=1,sValue="Unmute")
+                    elif value_gs == "test":
+                        Devices[1].Update(nValue=0,sValue="TEST")
+                    else:
+                        Devices[1].Update(nValue=0,sValue="Unknown alarm state")
+        elif key == "concentration":
+            for key_concentration, value_concentration in value.items():
+                if key_concentration == "ppm":
+                    Devices[2].Update(nValue=value_concentration, sValue=str(value_concentration))
+
+def updateTRV(self, json_request):
+    #json_request = {"thermostats": {"schedule_profile": 2, "schedule": True, "tmp": {"value": 17.4, "units": "C", "is_valid": True}}, "bat": {"value": 78, "voltage": 3.127}}
+    #json_request = {"thermostats": {"schedule_profile": 2, "schedule": False, "tmp": {"value": 17.4, "units": "C", "is_valid": True}}, "bat": {"value": 78, "voltage": 3.127}}
+    #Domoticz.Log(str(json_request))
+    for key, value in json_request.items():
+        if key == "thermostats":
+            for key_thermostats, value_thermostats in value.items():
+                if key_thermostats == "schedule_profile":
+                    Devices[1].Update(nValue=Devices[1].nValue, sValue=str(value_thermostats*10))
+                elif key_thermostats == "schedule":
+                    if value_thermostats == True:
+                        Devices[1].Update(nValue=1, sValue=Devices[1].sValue) 
+                    else:
+                        Devices[1].Update(nValue=0, sValue=Devices[1].sValue) 
+                elif key_thermostats == "tmp":
+                    for key_tmp, value_tmp in value_thermostats.items():
+                        if key_tmp == "value":
+                            Devices[2].Update(nValue=1, sValue=str(value_tmp))
+        elif key == "child_lock":
+            if value_bat == True:
+                Devices[4].Update(nValue=1, sValue=Devices[4].sValue)
+            else:
+                Devices[4].Update(nValue=0, sValue=Devices[4].sValue)
+        elif key == "bat":
+            for key_bat, value_bat in value.items():
+                if key_bat == "value":
+                    Devices[1].Update(nValue=Devices[1].nValue, sValue=Devices[1].sValue, BatteryLevel=value_bat)
+                    Devices[2].Update(nValue=Devices[2].nValue, sValue=Devices[2].sValue, BatteryLevel=value_bat)
+                    Devices[3].Update(nValue=Devices[3].nValue, sValue=Devices[3].sValue, BatteryLevel=value_bat)
+                    Devices[4].Update(nValue=Devices[3].nValue, sValue=Devices[3].sValue, BatteryLevel=value_bat)
 
 def updateSHSW1(json_request):
     relays = None
