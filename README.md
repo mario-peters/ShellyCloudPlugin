@@ -23,4 +23,5 @@ Currently the following Shelly devices are supported
 * Shelly TRV
 * Shelly EM
 * Shelly 3EM
+* Shelly Gas
 * Shelly Flood sensor
