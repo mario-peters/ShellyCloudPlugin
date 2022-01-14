@@ -15,7 +15,8 @@ Currently the following Shelly devices are supported
 * Shelly Door/Window 2
 * Shelly PlugS
 * Shelly TRV
-* Shelly Gas
+* Shelly Gas sensor
+* Shelly Flood sensor
 
 # Changelog
 * v.1.0.1 Small fix for switching on/off Shelly 2.5
@@ -24,4 +25,3 @@ Currently the following Shelly devices are supported
 # Feature list
 * Shelly EM
 * Shelly 3EM
-* Shelly Flood sensor
