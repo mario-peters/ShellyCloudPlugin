@@ -34,7 +34,7 @@
                <option label="Shelly Gas" value="SHGS-1"/>
                <option label="TODO: Shelly 3EM" value="SHEM-3"/>
                <option label="TODO: Shelly EM" value="SHEM"/>
-               <option label="TODO: Shelly Flood" value="SHWT-1"/>
+               <option label="Shelly Flood" value="SHWT-1"/>
             </options> 
         </param>
     </params>
@@ -83,6 +83,8 @@ class BasePlugin:
                         createTRV(json_items)
                     elif Parameters["Mode1"] == self.SHELLY_GAS:
                         createGAS()
+                    elif Parameters["Mode1"] == self.SHELLY_FLOOD:
+                        createFlood()
                     else:
                         Domoticz.Log("Type: "+Parameters["Mode1"])
             else:
@@ -238,6 +240,8 @@ class BasePlugin:
                     updateTRV(self, json_request)
                 if Parameters["Mode1"] == self.SHELLY_GAS:
                     updateGAS(self, json_request)
+                if Parameters["Mode1"] == self.SHELLY_FLOOD:
+                    updateFlood(json_request)
                 request_shelly_status.close()
             except requests.exceptions.Timeout as e:
                 Domoticz.Error(str(e))
@@ -291,6 +295,9 @@ def DumpConfigToLog():
         Domoticz.Debug("Device sValue:   '" + Devices[x].sValue + "'")
         Domoticz.Debug("Device LastLevel: " + str(Devices[x].LastLevel))
     return
+
+def createFlood():
+    Domoticz.Device(Name="Flood", Unit=1, Type=243, Subtype=22, Used=1).Create()
 
 def createGAS():
     Domoticz.Device(Name="Alarm", Unit=1, Type=243, Subtype=22, Used=1).Create()
@@ -485,6 +492,21 @@ def createTotal(name, power, value, count):
     total = total/60
     total = int(total)
     Devices[21+count].Update(nValue=0,sValue=str(power)+";"+str(total))
+
+def updateFlood(json_request):
+    json_request0 = {"flood": False,"bat": {"value": 71}}
+    json_request1 = {"flood": True,"bat": {"value": 71}}
+    #json_request = json_request1
+    for key, value in json_request.items():
+        if key == "bat":
+            for key_bat, value_bat in value.items():
+                if key_bat == "value":
+                    Devices[1].Update(nValue=Devices[1].nValue, sValue=Devices[1].sValue, BatteryLevel=value_bat)
+        elif key == "flood":
+            if value == True:
+                Devices[1].Update(nValue=4, sValue="Flood")
+            else:
+                Devices[1].Update(nValue=1, sValue="None")
 
 def updateGAS(self, json_request):
     json_request0 = {"gas_sensor": {"alarm_state": "none"}, "concentration": {"ppm": 100}}
