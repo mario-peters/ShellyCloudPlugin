@@ -308,7 +308,7 @@ def createGAS():
 
 
 def createTRV(json_items):
-    json_items = {"thermostats": {"schedule_profile_names": ["Livingroom","Livingroom 1","Bedroom","Bedroom 1","Holiday"]}}
+    #json_items = {"thermostats": {"schedule_profile_names": ["Livingroom","Livingroom 1","Bedroom","Bedroom 1","Holiday"]}}
     for key, value in json_items.items():
         if key == "thermostats":
             schedule_profile_names = "---|"
