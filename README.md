@@ -17,11 +17,11 @@ Currently the following Shelly devices are supported
 * Shelly TRV
 * Shelly Gas sensor
 * Shelly Flood sensor
+* Shelly EM
 
 # Changelog
 * v.1.0.1 Small fix for switching on/off Shelly 2.5
 * v.1.0.0 Initial version
 
 # Feature list
-* Shelly EM
 * Shelly 3EM
