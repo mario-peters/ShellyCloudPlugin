@@ -33,7 +33,7 @@
                <option label="Shelly TRV" value="SHTRV-01"/>
                <option label="Shelly Gas" value="SHGS-1"/>
                <option label="TODO: Shelly 3EM" value="SHEM-3"/>
-               <option label="TODO: Shelly EM" value="SHEM"/>
+               <option label="Shelly EM" value="SHEM"/>
                <option label="Shelly Flood" value="SHWT-1"/>
             </options> 
         </param>
@@ -85,6 +85,8 @@ class BasePlugin:
                         createGAS()
                     elif Parameters["Mode1"] == self.SHELLY_FLOOD:
                         createFlood()
+                    elif Parameters["Mode1"] == self.SHELLY_EM:
+                        createEM(json_items)
                     else:
                         Domoticz.Log("Type: "+Parameters["Mode1"])
             else:
@@ -109,7 +111,7 @@ class BasePlugin:
         url = "http://"+Parameters["Address"]
         headers = {'content-type':'application/json'}
 
-        if Parameters["Mode1"] != "SHDW-2" and Parameters["Mode1"] != self.SHELLY_TRV and Parameters["Mode1"] != self.SHELLY_GAS:
+        if Parameters["Mode1"] != "SHDW-2" and Parameters["Mode1"] != self.SHELLY_TRV and Parameters["Mode1"] != self.SHELLY_GAS and Parameters["Mode1"] != self.SHELLY_EM:
             if Parameters["Mode1"] == "SHSW-1" or Parameters["Mode1"] == "SHPLG-S" or Parameters["Mode1"] == "SHSW-PM":
                 url = url + "/relay/" + str(Unit-1)
             if Parameters["Mode1"] == "SHSW-25":
@@ -187,6 +189,17 @@ class BasePlugin:
             if str(Command) == "Off":
                 if Unit == 4:
                     url = url + "/mute"
+        elif Parameters["Mode1"] == self.SHELLY_EM:
+            if str(Command) == "On":
+                if Unit == 1:
+                    url = url + "/relay/0?turn=on"
+                elif Unit == 40:
+                    url = url + "/settings?led_status_disable=true"
+            elif str(Command) == "Off":
+                if Unit == 1:
+                    url = url + "/relay/0?turn=off"
+                elif Unit == 40:
+                    url = url + "/settings?led_status_disable=false"
         Domoticz.Log("url: "+url)
         try:
             response = requests.get(url,headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
@@ -242,6 +255,8 @@ class BasePlugin:
                     updateGAS(self, json_request)
                 if Parameters["Mode1"] == self.SHELLY_FLOOD:
                     updateFlood(json_request)
+                if Parameters["Mode1"] == self.SHELLY_EM:
+                    updateEM(json_request)
                 request_shelly_status.close()
             except requests.exceptions.Timeout as e:
                 Domoticz.Error(str(e))
@@ -308,7 +323,7 @@ def createGAS():
 
 
 def createTRV(json_items):
-    json_items = {"thermostats": {"schedule_profile_names": ["Livingroom","Livingroom 1","Bedroom","Bedroom 1","Holiday"]}}
+    #json_items = {"thermostats": {"schedule_profile_names": ["Livingroom","Livingroom 1","Bedroom","Bedroom 1","Holiday"]}}
     for key, value in json_items.items():
         if key == "thermostats":
             schedule_profile_names = "---|"
@@ -328,6 +343,27 @@ def createTRV(json_items):
     Domoticz.Device(Name="Setpoint", Unit=3, Type=242, Subtype=1, Used=1).Create()
     Domoticz.Device(Name="Child lock", Unit=4, Type=244, Subtype=73, Switchtype=0, Used=1).Create()
 
+def createEM(json_items):
+    json_items = {"relays": [{"name": "TEST", "ison": False}], "emeters": [{"appliance_type": "General"},{"appliance_type": "General"}], "led_status_disable": False}
+    relays = None
+    meters = None
+    for key, value in json_items.items():
+        if key == "relays":
+            relays = value
+        elif key == "emeters":
+            meters = value
+    count = 0
+    for relay in relays:
+        name = createRelay(relay, count)
+        count = count + 1
+    count = 1
+    for meter in meters:
+        name = "EM"+str(count)
+        Domoticz.Device(Name=name+"_power", Unit=11+count-1, Used=1, Type=248, Subtype=1).Create()
+        Domoticz.Device(Name=name+"_Total_kWh", Unit=21+count-1, Used=1, Type=243, Subtype=29).Create()
+        Domoticz.Device(Name=name+"_Total returned_kWh", Unit=31+count-1, Used=1, Type=243, Subtype=29).Create()
+        count = count + 1 
+    Domoticz.Device(Name="Led Disable", Unit=40, Type=244, Subtype=73, Switchtype=0, Used=1).Create()
 
 def createSHSW1(json_items):
     relays = None
@@ -567,6 +603,24 @@ def updateTRV(self, json_request):
                     Devices[3].Update(nValue=Devices[3].nValue, sValue=Devices[3].sValue, BatteryLevel=value_bat)
                     Devices[4].Update(nValue=Devices[3].nValue, sValue=Devices[3].sValue, BatteryLevel=value_bat)
 
+def updateEM(json_request):
+    json_request1 = {"relays": [{"ison": False}], "emeters": [{"power": 120, "total": 121, "total_returned": 122}, {"power": 10, "total": 11, "total_returned": 12}]}
+    #json_request = json_request1
+    relays = None
+    meters = None
+    for key, value in json_request.items():
+        if key == "relays":
+            relays = value
+        if key == "emeters":
+            meters = value
+    count = 0
+    for relay in relays:
+        updateRelay(relay, count)
+    count = 0
+    for meter in meters:
+        updateMeter(meters[count], count)
+        count = count + 1
+
 def updateSHSW1(json_request):
     relays = None
     meters = None
@@ -694,3 +748,8 @@ def updateMeter(meter, count):
             total=total/60
             total=int(total)
             Devices[21+count].Update(nValue=0,sValue=power+";"+str(total))
+        if key == "total_returned":
+            total = int(value)
+            total = total/60
+            total = int(total)
+            Devices[31+count].Update(nValue=0,sValue=power+";"+str(total))
