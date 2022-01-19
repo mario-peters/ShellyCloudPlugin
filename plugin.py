@@ -32,7 +32,7 @@
                <option label="Shelly Plug" value="SHPLG-S"/>
                <option label="Shelly TRV" value="SHTRV-01"/>
                <option label="Shelly Gas" value="SHGS-1"/>
-               <option label="TODO: Shelly 3EM" value="SHEM-3"/>
+               <option label="Shelly 3EM" value="SHEM-3"/>
                <option label="Shelly EM" value="SHEM"/>
                <option label="Shelly Flood" value="SHWT-1"/>
             </options> 
@@ -86,7 +86,9 @@ class BasePlugin:
                     elif Parameters["Mode1"] == self.SHELLY_FLOOD:
                         createFlood()
                     elif Parameters["Mode1"] == self.SHELLY_EM:
-                        createEM(json_items)
+                        createEM(json_items, "EM")
+                    elif Parameters["Mode1"] == self.SHELLY_3EM:
+                        createEM(json_items, "3EM")
                     else:
                         Domoticz.Log("Type: "+Parameters["Mode1"])
             else:
@@ -189,7 +191,7 @@ class BasePlugin:
             if str(Command) == "Off":
                 if Unit == 4:
                     url = url + "/mute"
-        elif Parameters["Mode1"] == self.SHELLY_EM:
+        elif Parameters["Mode1"] == self.SHELLY_EM or Parameters["Mode1"] == self.SHELLY_3EM:
             if str(Command) == "On":
                 if Unit == 1:
                     url = url + "/relay/0?turn=on"
@@ -255,7 +257,7 @@ class BasePlugin:
                     updateGAS(self, json_request)
                 if Parameters["Mode1"] == self.SHELLY_FLOOD:
                     updateFlood(json_request)
-                if Parameters["Mode1"] == self.SHELLY_EM:
+                if Parameters["Mode1"] == self.SHELLY_EM or Parameters["Mode1"] == self.SHELLY_3EM:
                     updateEM(json_request)
                 request_shelly_status.close()
             except requests.exceptions.Timeout as e:
@@ -343,8 +345,11 @@ def createTRV(json_items):
     Domoticz.Device(Name="Setpoint", Unit=3, Type=242, Subtype=1, Used=1).Create()
     Domoticz.Device(Name="Child lock", Unit=4, Type=244, Subtype=73, Switchtype=0, Used=1).Create()
 
-def createEM(json_items):
-    json_items = {"relays": [{"name": "TEST", "ison": False}], "emeters": [{"appliance_type": "General"},{"appliance_type": "General"}], "led_status_disable": False}
+def createEM(json_items, aname):
+    #EM
+    #json_items = {"relays": [{"name": "TEST", "ison": False}], "emeters": [{"appliance_type": "General"},{"appliance_type": "General"}], "led_status_disable": False}
+    #3EM
+    #json_items = {"relays": [{"name": "TEST", "ison": False}], "emeters": [{"appliance_type": "General"},{"appliance_type": "General"},{"appliance_type": "General"}], "led_status_disable": False}
     relays = None
     meters = None
     for key, value in json_items.items():
@@ -358,7 +363,7 @@ def createEM(json_items):
         count = count + 1
     count = 1
     for meter in meters:
-        name = "EM"+str(count)
+        name = aname+str(count)
         Domoticz.Device(Name=name+"_power", Unit=11+count-1, Used=1, Type=248, Subtype=1).Create()
         Domoticz.Device(Name=name+"_Total_kWh", Unit=21+count-1, Used=1, Type=243, Subtype=29).Create()
         Domoticz.Device(Name=name+"_Total returned_kWh", Unit=31+count-1, Used=1, Type=243, Subtype=29).Create()
@@ -604,8 +609,12 @@ def updateTRV(self, json_request):
                     Devices[4].Update(nValue=Devices[3].nValue, sValue=Devices[3].sValue, BatteryLevel=value_bat)
 
 def updateEM(json_request):
+    #EM
     json_request1 = {"relays": [{"ison": False}], "emeters": [{"power": 120, "total": 121, "total_returned": 122}, {"power": 10, "total": 11, "total_returned": 12}]}
     #json_request = json_request1
+    #3EM
+    json_request2 = {"relays": [{"ison": False}], "emeters": [{"power": 120, "total": 121, "total_returned": 122}, {"power": 10, "total": 11, "total_returned": 12},{"power": 300, "total": 311, "total_returned": 312}]}
+    #json_request = json_request2
     relays = None
     meters = None
     for key, value in json_request.items():
