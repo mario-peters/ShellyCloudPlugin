@@ -9,19 +9,32 @@ Currently the following Shelly devices are supported
 * Shelly 1
 * Shelly PM
 * Shelly 2.5 (relay and roller)
-* Shelly Dimmer
-* Shelly RGBW2 (only Color and White)
-* Shelly Bulb
-* Shelly Door/Window 2
-* Shelly PlugS
 * Shelly TRV
-* Shelly Gas sensor
+* Shelly PlugS
+* Shelly Bulb
+* Shelly RGBW2 (only Color and White)
+* Shelly Dimmer 1/2* 
 * Shelly Flood sensor
+* Shelly Door/Window 2
+* Shelly Gas sensor
 * Shelly EM
+* Shelly 3EM
 
 # Changelog
 * v.1.0.1 Small fix for switching on/off Shelly 2.5
 * v.1.0.0 Initial version
 
 # Feature list
-* Shelly 3EM
+* Shelly1L
+* Shelly2
+* Shelly Motion
+* Shelly Plug
+* Shelly PlugS
+* Shelly i3
+* Shelly Button1
+* Shelly Vintage
+* Shelly Duo
+* Shelly Bulb RGBW
+* Shelly Sense
+* Shelly H&T
+* Shelly Smoke
