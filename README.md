@@ -8,6 +8,7 @@ You can find th specific configuration and ToDo's on the Wiki page.
 Currently the following Shelly devices are supported
 * Shelly 1
 * Shelly PM
+* Shelly 1L
 * Shelly 2.5 (relay and roller)
 * Shelly TRV
 * Shelly PlugS
@@ -25,7 +26,6 @@ Currently the following Shelly devices are supported
 * v.1.0.0 Initial version
 
 # Feature list
-* Shelly1L
 * Shelly2
 * Shelly Motion
 * Shelly Plug
