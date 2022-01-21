@@ -24,6 +24,7 @@
             <options>
                <option label="Shelly 1" value="SHSW-1"/>
                <option label="Shelly PM" value="SHSW-PM"/>
+               <option label="Shelly 1L" value="SHSW-L"/>
                <option label="Shelly 2.5" value="SHSW-25"/>
                <option label="Shelly Dimmer" value="SHDM-1"/>
                <option label="Shelly RGBW2" value="SHRGBW2"/>
@@ -53,6 +54,8 @@ class BasePlugin:
     SHELLY_3EM="SHEM-3"
     SHELLY_GAS="SHGS-1"
     SHELLY_FLOOD="SHWT-1"
+    SHELLY_1L="SHSW-L"
+    SHELLY_1PM = "SHSW-PM"
 
     def __init__(self):
         return
@@ -69,8 +72,10 @@ class BasePlugin:
                 if Parameters["Mode1"] == "SHDW-2":
                     createSHDW2()
                 else:
-                    if Parameters["Mode1"] == "SHSW-1" or Parameters["Mode1"] == "SHSW-PM":
+                    if Parameters["Mode1"] == "SHSW-1" :
                         createSHSW1(json_items)
+                    elif Parameters["Mode1"] == self.SHELLY_1L or Parameters["Mode1"] == self.SHELLY_1PM:
+                        createSHSWL(json_items)
                     elif Parameters["Mode1"] == "SHSW-25":
                         createSHSW25(self,json_items)
                     elif Parameters["Mode1"] == "SHDM-1":
@@ -113,8 +118,8 @@ class BasePlugin:
         url = "http://"+Parameters["Address"]
         headers = {'content-type':'application/json'}
 
-        if Parameters["Mode1"] != "SHDW-2" and Parameters["Mode1"] != self.SHELLY_TRV and Parameters["Mode1"] != self.SHELLY_GAS and Parameters["Mode1"] != self.SHELLY_EM:
-            if Parameters["Mode1"] == "SHSW-1" or Parameters["Mode1"] == "SHPLG-S" or Parameters["Mode1"] == "SHSW-PM":
+        if Parameters["Mode1"] != "SHDW-2" and Parameters["Mode1"] != self.SHELLY_TRV and Parameters["Mode1"] != self.SHELLY_GAS and Parameters["Mode1"] != self.SHELLY_EM and Parameters["Mode1"] != self.SHELLY_1L:
+            if Parameters["Mode1"] == "SHSW-1" or Parameters["Mode1"] == "SHPLG-S" or Parameters["Mode1"] == self.SHELLY_1PM:
                 url = url + "/relay/" + str(Unit-1)
             if Parameters["Mode1"] == "SHSW-25":
                 if self.mode == "relay":
@@ -202,6 +207,17 @@ class BasePlugin:
                     url = url + "/relay/0?turn=off"
                 elif Unit == 40:
                     url = url + "/settings?led_status_disable=false"
+        elif Parameter["Mode1"] == self.SHELLY_1L:
+            if str(Command) == "On":
+                if Unit == 1:
+                    url = url + "/relay/0?turn=on"
+                elif Unit == 40:
+                    url = url + "/settings?led_status_disable=true"
+            elif str(Command) == "Off":
+                if Unit == 1:
+                    url = url + "/relay/0?turn=off"
+                elif Unit == 40:
+                    url = url + "/settings?led_status_disable=false"            
         Domoticz.Log("url: "+url)
         try:
             response = requests.get(url,headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
@@ -242,7 +258,7 @@ class BasePlugin:
                 request_shelly_status = requests.get("http://"+Parameters["Address"]+"/status",headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
                 Domoticz.Debug(request_shelly_status.text)
                 json_request = json.loads(request_shelly_status.text)
-                if Parameters["Mode1"] == "SHSW-1" or Parameters["Mode1"] == "SHPLG-S" or Parameters["Mode1"] == "SHSW-PM":
+                if Parameters["Mode1"] == "SHSW-1" or Parameters["Mode1"] == "SHPLG-S" or Parameters["Mode1"] == self.SHELLY_1PM or Parameters["Mode1"] == self.SHELLY_1L:
                     updateSHSW1(json_request)
                 if Parameters["Mode1"] == "SHSW-25":
                     if self.mode == "relay":
@@ -370,6 +386,19 @@ def createEM(json_items, aname):
         count = count + 1 
     Domoticz.Device(Name="Led Disable", Unit=40, Type=244, Subtype=73, Switchtype=0, Used=1).Create()
 
+def createSHSWL(json_items):
+    relays = None
+    for key, value in json_items.items():
+        if key == "relays":
+            relays = value
+    count = 0
+    for relay in relays:
+        name = createRelay(relay, count)
+        meter={"power":0,"total":0}
+        createMeter(name, meter, count)
+        count = count + 1
+    Domoticz.Device(Name="Led Disable", Unit=40, Type=244, Subtype=73, Switchtype=0, Used=1).Create()
+    
 def createSHSW1(json_items):
     relays = None
     for key, value in json_items.items():
@@ -629,7 +658,7 @@ def updateEM(json_request):
     for meter in meters:
         updateMeter(meters[count], count)
         count = count + 1
-
+        
 def updateSHSW1(json_request):
     relays = None
     meters = None
