@@ -607,23 +607,25 @@ def updateGAS(self, json_request):
                     Devices[2].Update(nValue=value_concentration, sValue=str(value_concentration))
 
 def updateTRV(self, json_request):
-    #json_request = {"thermostats": {"schedule_profile": 2, "schedule": True, "tmp": {"value": 17.4, "units": "C", "is_valid": True}}, "bat": {"value": 78, "voltage": 3.127}}
-    #json_request = {"thermostats": {"schedule_profile": 2, "schedule": False, "tmp": {"value": 17.4, "units": "C", "is_valid": True}}, "bat": {"value": 78, "voltage": 3.127}}
+    #json_request = {"thermostats": [{"schedule_profile": 2, "schedule": True, "tmp": {"value": 17.4, "units": "C", "is_valid": True}}], "bat": {"value": 78, "voltage": 3.127}}
+    #json_request = {"thermostats": [{"schedule_profile": 2, "schedule": False, "tmp": {"value": 17.4, "units": "C", "is_valid": True}}], "bat": {"value": 78, "voltage": 3.127}}
+    #json_request = {"thermostats": [{"schedule_profile": 0, "schedule": False, "tmp": {"value": 21.6, "units": "C", "is_valid": True}}], "bat": {"value": 100, "voltage": 4.136}}
     #Domoticz.Log(str(json_request))
     for key, value in json_request.items():
         if key == "thermostats":
-            for key_thermostats, value_thermostats in value.items():
-                if key_thermostats == "schedule_profile":
-                    Devices[1].Update(nValue=Devices[1].nValue, sValue=str(value_thermostats*10))
-                elif key_thermostats == "schedule":
-                    if value_thermostats == True:
-                        Devices[1].Update(nValue=1, sValue=Devices[1].sValue) 
-                    else:
-                        Devices[1].Update(nValue=0, sValue=Devices[1].sValue) 
-                elif key_thermostats == "tmp":
-                    for key_tmp, value_tmp in value_thermostats.items():
-                        if key_tmp == "value":
-                            Devices[2].Update(nValue=1, sValue=str(value_tmp))
+            for thermostat in value:
+                for key_thermostats, value_thermostats in thermostat.items():
+                    if key_thermostats == "schedule_profile":
+                        Devices[1].Update(nValue=Devices[1].nValue, sValue=str(value_thermostats*10))
+                    elif key_thermostats == "schedule":
+                        if value_thermostats == True:
+                            Devices[1].Update(nValue=1, sValue=Devices[1].sValue)
+                        else:
+                            Devices[1].Update(nValue=0, sValue=Devices[1].sValue)
+                    elif key_thermostats == "tmp":
+                        for key_tmp, value_tmp in value_thermostats.items():
+                            if key_tmp == "value":
+                                Devices[2].Update(nValue=1, sValue=str(value_tmp))
         elif key == "child_lock":
             if value_bat == True:
                 Devices[4].Update(nValue=1, sValue=Devices[4].sValue)
