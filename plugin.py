@@ -29,6 +29,7 @@
                <option label="Shelly Dimmer" value="SHDM-1"/>
                <option label="Shelly RGBW2" value="SHRGBW2"/>
                <option label="Shelly Bulb" value="SHBLB-1"/>
+               <option label="Shelly Smoke" value="SHSM-01"/>
                <option label="Shelly Door/Window 2" value="SHDW-2"/>
                <option label="Shelly Plug" value="SHPLG-S"/>
                <option label="Shelly TRV" value="SHTRV-01"/>
@@ -88,6 +89,8 @@ class BasePlugin:
                         createTRV(json_items)
                     elif Parameters["Mode1"] == self.SHELLY_GAS:
                         createGAS()
+                    elif Parameters["Mode1"] == self.SHELLY_SMOKE:
+                        createSMOKE()
                     elif Parameters["Mode1"] == self.SHELLY_FLOOD:
                         createFlood()
                     elif Parameters["Mode1"] == self.SHELLY_EM:
@@ -275,6 +278,8 @@ class BasePlugin:
                     updateFlood(json_request)
                 if Parameters["Mode1"] == self.SHELLY_EM or Parameters["Mode1"] == self.SHELLY_3EM:
                     updateEM(json_request)
+                if Parameters["Mode1"] == self.SHELLY_SMOKE:
+                    updateSMOKE(json_request)
                 request_shelly_status.close()
             except requests.exceptions.Timeout as e:
                 Domoticz.Error(str(e))
@@ -339,6 +344,9 @@ def createGAS():
     Domoticz.Device(Name="Self-test", Unit=3, Type=244, Subtype=73, Switchtype=9, Used=1).Create()
     Domoticz.Device(Name="(Un)mute alarm", Unit=4, Type=244, Subtype=73, Switchtype=0, Used=1).Create()
 
+def createSMOKE():
+    Domoticz.Device(Name="Smoke", Unit=1, Type=244, Subtype=62, Switchtype=5, Used=1).Create()
+    Domoticz.Device(Name="Temperature", Unit=2, Used=1, Type=80, Subtype=5).Create()
 
 def createTRV(json_items):
     #json_items = {"thermostats": {"schedule_profile_names": ["Livingroom","Livingroom 1","Bedroom","Bedroom 1","Holiday"]}}
@@ -605,6 +613,25 @@ def updateGAS(self, json_request):
             for key_concentration, value_concentration in value.items():
                 if key_concentration == "ppm":
                     Devices[2].Update(nValue=value_concentration, sValue=str(value_concentration))
+
+def updateSMOKE(json_request):
+    #json_request = {"smoke": False, "tmp": {"value": 22}, "bat": {"value": 71}}
+    #json_request = {"smoke": True, "tmp": {"value": 12}, "bat": {"value": 61}}
+    for key, value in json_request.items():
+        if key == "smoke":
+            if value == True:
+                Devices[1].Update(nValue=1, sValue=Devices[1].sValue)
+            else:
+                Devices[1].Update(nValue=0, sValue=Devices[1].sValue)
+        elif key == "tmp":
+            for key_tmp, value_tmp in value.items():
+                if key_tmp == "value":
+                    Devices[2].Update(nValue=1, sValue=str(value_tmp))
+        elif key == "bat":
+            for key_bat, value_bat in value.items():
+                if key_bat == "value":
+                    Devices[1].Update(nValue=Devices[1].nValue, sValue=Devices[1].sValue, BatteryLevel=value_bat)
+                    Devices[2].Update(nValue=Devices[2].nValue, sValue=Devices[2].sValue, BatteryLevel=value_bat)
 
 def updateTRV(self, json_request):
     #json_request = {"thermostats": [{"schedule_profile": 2, "schedule": True, "tmp": {"value": 17.4, "units": "C", "is_valid": True}}], "bat": {"value": 78, "voltage": 3.127}}
