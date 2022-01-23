@@ -14,7 +14,8 @@ Currently the following Shelly devices are supported
 * Shelly PlugS
 * Shelly Bulb
 * Shelly RGBW2 (only Color and White)
-* Shelly Dimmer 1/2* 
+* Shelly Dimmer 1/2
+* Shelly Smoke
 * Shelly Flood sensor
 * Shelly Door/Window 2
 * Shelly Gas sensor
@@ -37,4 +38,3 @@ Currently the following Shelly devices are supported
 * Shelly Bulb RGBW
 * Shelly Sense
 * Shelly H&T
-* Shelly Smoke
