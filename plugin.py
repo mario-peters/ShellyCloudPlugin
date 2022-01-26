@@ -26,17 +26,17 @@
                <option label="Shelly PM" value="SHSW-PM"/>
                <option label="Shelly 1L" value="SHSW-L"/>
                <option label="Shelly 2.5" value="SHSW-25"/>
-               <option label="Shelly Dimmer" value="SHDM-1"/>
-               <option label="Shelly RGBW2" value="SHRGBW2"/>
-               <option label="Shelly Bulb" value="SHBLB-1"/>
-               <option label="Shelly Smoke" value="SHSM-01"/>
-               <option label="Shelly Door/Window 2" value="SHDW-2"/>
-               <option label="Shelly Plug" value="SHPLG-S"/>
                <option label="Shelly TRV" value="SHTRV-01"/>
+               <option label="Shelly Plug" value="SHPLG-S"/>
+               <option label="Shelly Bulb" value="SHBLB-1"/>
+               <option label="Shelly RGBW2" value="SHRGBW2"/>
+               <option label="Shelly Dimmer" value="SHDM-1"/>
+               <option label="Shelly Smoke" value="SHSM-01"/>
+               <option label="Shelly Flood" value="SHWT-1"/>
+               <option label="Shelly Door/Window 2" value="SHDW-2"/>
                <option label="Shelly Gas" value="SHGS-1"/>
                <option label="Shelly 3EM" value="SHEM-3"/>
                <option label="Shelly EM" value="SHEM"/>
-               <option label="Shelly Flood" value="SHWT-1"/>
             </options> 
         </param>
     </params>
@@ -50,13 +50,21 @@ class BasePlugin:
  
     #mode = None
     mode = "color"
+    SHELLY_1 = "SHSW-1"
+    SHELLY_1PM = "SHSW-PM"
+    SHELLY_1L="SHSW-L"
+    SHELLY_25 = "SHSW-25"
     SHELLY_TRV="SHTRV-01"
+    SHELLY_PLUG = "SHPLG-S"
+    SHELLY_BULB = "SHBLB-1"    
+    SHELLY_RGBW2 = "SHRGBW2"
+    SHELLY_DIMMER = "SHDM-1"
+    SHELLY_SMOKE = "SHSM-01"
+    SHELLY_FLOOD = "SHWT-1"
+    SHELLY_DW = "SHDW-2"
+    SHELLY_GAS="SHGS-1"
     SHELLY_EM="SHEM"
     SHELLY_3EM="SHEM-3"
-    SHELLY_GAS="SHGS-1"
-    SHELLY_FLOOD="SHWT-1"
-    SHELLY_1L="SHSW-L"
-    SHELLY_1PM = "SHSW-PM"
 
     def __init__(self):
         return
@@ -70,37 +78,36 @@ class BasePlugin:
             json_items = json.loads(response_shelly.text)
             response_shelly.close()
             if len(Devices) == 0:
-                if Parameters["Mode1"] == "SHDW-2":
+                if Parameters["Mode1"] == self.SHELLY_1:
+                    createSHSW1(json_items)
+                elif Parameters["Mode1"] == self.SHELLY_1L or Parameters["Mode1"] == self.SHELLY_1PM:
+                    createSHSWL(json_items)
+                elif Parameters["Mode1"] == self.SHELLY_25:
+                    createSHSW25(self,json_items)
+                elif Parameters["Mode1"] == self.SHELLY_TRV:
+                    createTRV(json_items)
+                elif Parameters["Mode1"] == self.SHELLY_PLUG:
+                    createSHPLG(json_items)
+                elif Parameters["Mode1"] == self.SHELLY_RGBW2 or Parameters["Mode1"] == self.SHELLY_BULB:
+                    createSHRGBW2(self,json_items)
+                elif Parameters["Mode1"] == self.SHELLY_DIMMER:
+                    createSHDM1(json_items)
+                elif Parameters["Mode1"] == self.SHELLY_GAS:
+                    createGAS()
+                elif Parameters["Mode1"] == self.SHELLY_SMOKE:
+                    createSMOKE()
+                elif Parameters["Mode1"] == self.DW:
                     createSHDW2()
+                elif Parameters["Mode1"] == self.SHELLY_FLOOD:
+                    createFlood()
+                elif Parameters["Mode1"] == self.SHELLY_EM:
+                    createEM(json_items, "EM")
+                elif Parameters["Mode1"] == self.SHELLY_3EM:
+                    createEM(json_items, "3EM")
                 else:
-                    if Parameters["Mode1"] == "SHSW-1" :
-                        createSHSW1(json_items)
-                    elif Parameters["Mode1"] == self.SHELLY_1L or Parameters["Mode1"] == self.SHELLY_1PM:
-                        createSHSWL(json_items)
-                    elif Parameters["Mode1"] == "SHSW-25":
-                        createSHSW25(self,json_items)
-                    elif Parameters["Mode1"] == "SHDM-1":
-                        createSHDM1(json_items)
-                    elif Parameters["Mode1"] == "SHRGBW2" or Parameters["Mode1"] == "SHBLB-1":
-                        createSHRGBW2(self,json_items)
-                    elif Parameters["Mode1"] == "SHPLG-S":
-                        createSHPLG(json_items)
-                    elif Parameters["Mode1"] == self.SHELLY_TRV:
-                        createTRV(json_items)
-                    elif Parameters["Mode1"] == self.SHELLY_GAS:
-                        createGAS()
-                    elif Parameters["Mode1"] == self.SHELLY_SMOKE:
-                        createSMOKE()
-                    elif Parameters["Mode1"] == self.SHELLY_FLOOD:
-                        createFlood()
-                    elif Parameters["Mode1"] == self.SHELLY_EM:
-                        createEM(json_items, "EM")
-                    elif Parameters["Mode1"] == self.SHELLY_3EM:
-                        createEM(json_items, "3EM")
-                    else:
-                        Domoticz.Log("Type: "+Parameters["Mode1"])
+                    Domoticz.Log("Type: "+Parameters["Mode1"])
             else:
-                if Parameters["Mode1"] == "SHSW-25":
+                if Parameters["Mode1"] == self.SHELLY_25:
                     for key, value in json_items.items():
                         if key == "mode":
                             self.mode = value
@@ -261,25 +268,26 @@ class BasePlugin:
                 request_shelly_status = requests.get("http://"+Parameters["Address"]+"/status",headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
                 Domoticz.Debug(request_shelly_status.text)
                 json_request = json.loads(request_shelly_status.text)
-                if Parameters["Mode1"] == "SHSW-1" or Parameters["Mode1"] == "SHPLG-S" or Parameters["Mode1"] == self.SHELLY_1PM or Parameters["Mode1"] == self.SHELLY_1L:
+                #Domoticz.Log(str(json_request))
+                if Parameters["Mode1"] == self.SHELLY_1 or Parameters["Mode1"] == self.SHELLY_PLUG or Parameters["Mode1"] == self.SHELLY_1PM or Parameters["Mode1"] == self.SHELLY_1L:
                     updateSHSW1(json_request)
-                if Parameters["Mode1"] == "SHSW-25":
-                    if self.mode == "relay":
-                        updateSHSW25(json_request)
-                if Parameters["Mode1"] == "SHDM-1":
-                    updateSHDM1(json_request)
-                if Parameters["Mode1"] == "SHRGBW2" or Parameters["Mode1"] == "SHBLB-1":
-                    updateSHRGBW2(self, json_request)
-                if Parameters["Mode1"] == self.SHELLY_TRV:
+                elif Parameters["Mode1"] == self.SHELLY_25:
+                    updateSHSW25(json_request)
+                elif Parameters["Mode1"] == self.SHELLY_TRV:
                     updateTRV(self, json_request)
-                if Parameters["Mode1"] == self.SHELLY_GAS:
-                    updateGAS(self, json_request)
-                if Parameters["Mode1"] == self.SHELLY_FLOOD:
-                    updateFlood(json_request)
-                if Parameters["Mode1"] == self.SHELLY_EM or Parameters["Mode1"] == self.SHELLY_3EM:
-                    updateEM(json_request)
-                if Parameters["Mode1"] == self.SHELLY_SMOKE:
+                elif Parameters["Mode1"] == self.SHELLY_DIMMER:
+                    updateSHDM1(json_request)
+                elif Parameters["Mode1"] == self.SHELLY_RGBW2 or Parameters["Mode1"] == self.SHELLY_BULB:
+                    updateSHRGBW2(self, json_request)
+                elif Parameters["Mode1"] == self.SHELLY_SMOKE:
                     updateSMOKE(json_request)
+                elif Parameters["Mode1"] == self.SHELLY_FLOOD:
+                    updateFlood(json_request)
+                #elif Parameters["Mode1"] == self.SHELLY_DW2:
+                elif Parameters["Mode1"] == self.SHELLY_GAS:
+                    updateGAS(self, json_request)
+                elif Parameters["Mode1"] == self.SHELLY_EM or Parameters["Mode1"] == self.SHELLY_3EM:
+                    updateEM(json_request)
                 request_shelly_status.close()
             except requests.exceptions.Timeout as e:
                 Domoticz.Error(str(e))
@@ -405,7 +413,7 @@ def createSHSWL(json_items):
         meter={"power":0,"total":0}
         createMeter(name, meter, count)
         count = count + 1
-    Domoticz.Device(Name="Led Disable", Unit=40, Type=244, Subtype=73, Switchtype=0, Used=1).Create()
+    #Domoticz.Device(Name="Led Disable", Unit=40, Type=244, Subtype=73, Switchtype=0, Used=1).Create()
     
 def createSHSW1(json_items):
     relays = None
@@ -643,7 +651,7 @@ def updateTRV(self, json_request):
             for thermostat in value:
                 for key_thermostats, value_thermostats in thermostat.items():
                     if key_thermostats == "schedule_profile":
-                        Devices[1].Update(nValue=Devices[1].nValue, sValue=str(value_thermostats*10))
+                        Devices[1].Update(nValue=value_thermostats, sValue=str(value_thermostats))
                     elif key_thermostats == "schedule":
                         if value_thermostats == True:
                             Devices[1].Update(nValue=1, sValue=Devices[1].sValue)
@@ -664,7 +672,7 @@ def updateTRV(self, json_request):
                     Devices[1].Update(nValue=Devices[1].nValue, sValue=Devices[1].sValue, BatteryLevel=value_bat)
                     Devices[2].Update(nValue=Devices[2].nValue, sValue=Devices[2].sValue, BatteryLevel=value_bat)
                     Devices[3].Update(nValue=Devices[3].nValue, sValue=Devices[3].sValue, BatteryLevel=value_bat)
-                    Devices[4].Update(nValue=Devices[3].nValue, sValue=Devices[3].sValue, BatteryLevel=value_bat)
+                    Devices[4].Update(nValue=Devices[4].nValue, sValue=Devices[4].sValue, BatteryLevel=value_bat)
 
 def updateEM(json_request):
     #EM
