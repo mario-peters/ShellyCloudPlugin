@@ -10,6 +10,7 @@ Currently the following Shelly devices are supported
 * Shelly PM
 * Shelly 1L
 * Shelly 2.5 (relay and roller)
+* Shelly Motion
 * Shelly TRV
 * Shelly PlugS
 * Shelly Bulb
@@ -28,7 +29,6 @@ Currently the following Shelly devices are supported
 
 # Feature list
 * Shelly2
-* Shelly Motion
 * Shelly Plug
 * Shelly PlugS
 * Shelly i3
