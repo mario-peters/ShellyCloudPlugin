@@ -26,6 +26,7 @@
                <option label="Shelly PM" value="SHSW-PM"/>
                <option label="Shelly 1L" value="SHSW-L"/>
                <option label="Shelly 2.5" value="SHSW-25"/>
+               <option label="Shelly Motion" value="SHMOS-01"/>
                <option label="Shelly TRV" value="SHTRV-01"/>
                <option label="Shelly Plug" value="SHPLG-S"/>
                <option label="Shelly Bulb" value="SHBLB-1"/>
@@ -54,6 +55,7 @@ class BasePlugin:
     SHELLY_1PM = "SHSW-PM"
     SHELLY_1L="SHSW-L"
     SHELLY_25 = "SHSW-25"
+    SHELLY_MOTION = "SHMOS-01"
     SHELLY_TRV="SHTRV-01"
     SHELLY_PLUG = "SHPLG-S"
     SHELLY_BULB = "SHBLB-1"    
@@ -84,6 +86,8 @@ class BasePlugin:
                     createSHSWL(json_items)
                 elif Parameters["Mode1"] == self.SHELLY_25:
                     createSHSW25(self,json_items)
+                elif Parameters["Mode1"] == self.SHELLY_MOTION:
+                    createMOTION(json_items)
                 elif Parameters["Mode1"] == self.SHELLY_TRV:
                     createTRV(json_items)
                 elif Parameters["Mode1"] == self.SHELLY_PLUG:
@@ -127,8 +131,8 @@ class BasePlugin:
         Domoticz.Log("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
         url = "http://"+Parameters["Address"]
         headers = {'content-type':'application/json'}
-
-        if Parameters["Mode1"] != "SHDW-2" and Parameters["Mode1"] != self.SHELLY_TRV and Parameters["Mode1"] != self.SHELLY_GAS and Parameters["Mode1"] != self.SHELLY_EM and Parameters["Mode1"] != self.SHELLY_1L:
+        
+        if Parameters["Mode1"] != "SHDW-2" and Parameters["Mode1"] != self.SHELLY_TRV and Parameters["Mode1"] != self.SHELLY_GAS and Parameters["Mode1"] != self.SHELLY_EM and Parameters["Mode1"] != self.SHELLY_1L and Parameters["Mode1"] != self.SHELLY_MOTION:
             if Parameters["Mode1"] == "SHSW-1" or Parameters["Mode1"] == "SHPLG-S" or Parameters["Mode1"] == self.SHELLY_1PM:
                 url = url + "/relay/" + str(Unit-1)
             if Parameters["Mode1"] == "SHSW-25":
@@ -217,7 +221,7 @@ class BasePlugin:
                     url = url + "/relay/0?turn=off"
                 elif Unit == 40:
                     url = url + "/settings?led_status_disable=false"
-        elif Parameter["Mode1"] == self.SHELLY_1L:
+        elif Parameters["Mode1"] == self.SHELLY_1L:
             if str(Command) == "On":
                 if Unit == 1:
                     url = url + "/relay/0?turn=on"
@@ -227,7 +231,14 @@ class BasePlugin:
                 if Unit == 1:
                     url = url + "/relay/0?turn=off"
                 elif Unit == 40:
-                    url = url + "/settings?led_status_disable=false"            
+                    url = url + "/settings?led_status_disable=false"
+        elif Parameters["Mode1"] == self.SHELLY_MOTION:
+            if str(Command) == "On":
+                if Unit == 3:
+                    url = url + "/settings?motion_enable=true"
+            elif str(Command) == "Off":
+                if Unit == 3:
+                    url = url + "/settings?motion_enabled=false"            
         Domoticz.Log("url: "+url)
         try:
             response = requests.get(url,headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
@@ -273,6 +284,8 @@ class BasePlugin:
                     updateSHSW1(json_request)
                 elif Parameters["Mode1"] == self.SHELLY_25:
                     updateSHSW25(json_request)
+                elif Parameters["Mode1"] == self.SHELLY_MOTION:
+                    updateMOTION(json_request)
                 elif Parameters["Mode1"] == self.SHELLY_TRV:
                     updateTRV(self, json_request)
                 elif Parameters["Mode1"] == self.SHELLY_DIMMER:
@@ -351,6 +364,12 @@ def createGAS():
     Domoticz.Device(Name="Concentration", Unit=2, Type=243, Subtype=33, Switchtype=3, Used=1, Options=Options).Create()
     Domoticz.Device(Name="Self-test", Unit=3, Type=244, Subtype=73, Switchtype=9, Used=1).Create()
     Domoticz.Device(Name="(Un)mute alarm", Unit=4, Type=244, Subtype=73, Switchtype=0, Used=1).Create()
+
+def createMOTION(json_items):
+    Domoticz.Device(Name="Motion", Unit=1, Type=244, Subtype=62, Switchtype=8, Used=1).Create()
+    Domoticz.Device(Name="Illumination", Unit=2, Type=246, Used=1).Create()
+    Domoticz.Device(Name="Motion enabled", Unit=3, Type=244, Subtype=62, Switchtype=0, Used=1).Create()
+    Devices[3].Update(nValue=1, sValue="True")
 
 def createSMOKE():
     Domoticz.Device(Name="Smoke", Unit=1, Type=244, Subtype=62, Switchtype=5, Used=1).Create()
@@ -640,6 +659,36 @@ def updateSMOKE(json_request):
                 if key_bat == "value":
                     Devices[1].Update(nValue=Devices[1].nValue, sValue=Devices[1].sValue, BatteryLevel=value_bat)
                     Devices[2].Update(nValue=Devices[2].nValue, sValue=Devices[2].sValue, BatteryLevel=value_bat)
+
+def updateMOTION(json_request):
+    json_request1 = {"lux": {"value": 1111}, "sensor": {"motion": False, "active": True}, "bat": {"value": 11}}
+    json_request2 = {"lux": {"value": 2222}, "sensor": {"motion": True, "active": True}, "bat": {"value": 21}}
+    json_request3 = {"lux": {"value": 3333}, "sensor": {"motion": False, "active": False}, "bat": {"value": 31}}
+    json_request4 = {"lux": {"value": 4444}, "sensor": {"motion": False, "active": True}, "bat": {"value": 41}}
+    #json_request = json_request2
+    for key, value in json_request.items():
+        if key == "lux":
+            for key_lux, value_lux in value.items():
+                if key_lux == "value":
+                    Devices[2].Update(nValue=Devices[2].nValue, sValue=str(value_lux))
+        elif key == "sensor":
+            for key_sensor, value_sensor in value.items():
+                if key_sensor == "motion":
+                    if value_sensor == True:
+                        Devices[1].Update(nValue=1, sValue=Devices[1].sValue)
+                    else:
+                        Devices[1].Update(nValue=0, sValue=Devices[1].sValue)
+                if key_sensor == "active":
+                    if value_sensor == True:
+                        Devices[3].Update(nValue=1, sValue=Devices[3].sValue)
+                    else:
+                        Devices[3].Update(nValue=0, sValue=Devices[3].sValue)
+        elif key == "bat":
+            for key_bat, value_bat in value.items():
+                if key_bat == "value":
+                    Devices[1].Update(nValue=Devices[1].nValue, sValue=Devices[1].sValue, BatteryLevel=value_bat)
+                    Devices[2].Update(nValue=Devices[2].nValue, sValue=Devices[2].sValue, BatteryLevel=value_bat)
+                    Devices[3].Update(nValue=Devices[3].nValue, sValue=Devices[3].sValue, BatteryLevel=value_bat)
 
 def updateTRV(self, json_request):
     #json_request = {"thermostats": [{"schedule_profile": 2, "schedule": True, "tmp": {"value": 17.4, "units": "C", "is_valid": True}}], "bat": {"value": 78, "voltage": 3.127}}
