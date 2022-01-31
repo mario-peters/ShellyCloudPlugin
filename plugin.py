@@ -32,6 +32,7 @@
                <option label="Shelly Bulb" value="SHBLB-1"/>
                <option label="Shelly RGBW2" value="SHRGBW2"/>
                <option label="Shelly Dimmer" value="SHDM-1"/>
+               <option label="Shelly H&T" value="SHHT-1"/>
                <option label="Shelly Smoke" value="SHSM-01"/>
                <option label="Shelly Flood" value="SHWT-1"/>
                <option label="Shelly Door/Window 2" value="SHDW-2"/>
@@ -61,6 +62,7 @@ class BasePlugin:
     SHELLY_BULB = "SHBLB-1"    
     SHELLY_RGBW2 = "SHRGBW2"
     SHELLY_DIMMER = "SHDM-1"
+    SHELLY_HT = "SHHT-1"
     SHELLY_SMOKE = "SHSM-01"
     SHELLY_FLOOD = "SHWT-1"
     SHELLY_DW = "SHDW-2"
@@ -96,14 +98,16 @@ class BasePlugin:
                     createSHRGBW2(self,json_items)
                 elif Parameters["Mode1"] == self.SHELLY_DIMMER:
                     createSHDM1(json_items)
-                elif Parameters["Mode1"] == self.SHELLY_GAS:
-                    createGAS()
+                elif Parameters["Mode1"] == self.SHELLY_HT:
+                    createHT()
                 elif Parameters["Mode1"] == self.SHELLY_SMOKE:
                     createSMOKE()
-                elif Parameters["Mode1"] == self.DW:
-                    createSHDW2()
                 elif Parameters["Mode1"] == self.SHELLY_FLOOD:
                     createFlood()
+                elif Parameters["Mode1"] == self.DW:
+                    createSHDW2()
+                elif Parameters["Mode1"] == self.SHELLY_GAS:
+                    createGAS()
                 elif Parameters["Mode1"] == self.SHELLY_EM:
                     createEM(json_items, "EM")
                 elif Parameters["Mode1"] == self.SHELLY_3EM:
@@ -294,6 +298,8 @@ class BasePlugin:
                     updateSHRGBW2(self, json_request)
                 elif Parameters["Mode1"] == self.SHELLY_SMOKE:
                     updateSMOKE(json_request)
+                elif Parameters["Mode1"] == self.SHELLY_HT:
+                    updateHT(json_request)
                 elif Parameters["Mode1"] == self.SHELLY_FLOOD:
                     updateFlood(json_request)
                 #elif Parameters["Mode1"] == self.SHELLY_DW2:
@@ -358,6 +364,11 @@ def DumpConfigToLog():
 def createFlood():
     Domoticz.Device(Name="Flood", Unit=1, Type=243, Subtype=22, Used=1).Create()
 
+def createHT():
+    Domoticz.Device(Name="Temperature", Unit=1, Type=80, Used=1).Create()
+    Domoticz.Device(Name="Humidity", Unit=2, Type=81, Used=1).Create()
+    Domoticz.Device(Name="Temperature + Humidity", Unit=3, Type=82, Used=1).Create()
+
 def createGAS():
     Domoticz.Device(Name="Alarm", Unit=1, Type=243, Subtype=22, Used=1).Create()
     Options={"ValueUnits": "ppm"}
@@ -376,22 +387,23 @@ def createSMOKE():
     Domoticz.Device(Name="Temperature", Unit=2, Used=1, Type=80, Subtype=5).Create()
 
 def createTRV(json_items):
-    #json_items = {"thermostats": {"schedule_profile_names": ["Livingroom","Livingroom 1","Bedroom","Bedroom 1","Holiday"]}}
+    json_items = {"thermostats": [{"schedule_profile_names": ["Livingroom","Livingroom 1","Bedroom","Bedroom 1","Holiday"]}]}
     for key, value in json_items.items():
         if key == "thermostats":
-            schedule_profile_names = "---|"
-            for key_thermostats, value_thermostats in value.items():
-                if key_thermostats == "schedule_profile_names":
-                    for item in value_thermostats:
-                        schedule_profile_names += str(item) + "|"
-            if schedule_profile_names != "":
-                levelactions = ""
-                count = 0
-                schedule_profile_names = schedule_profile_names[:-1]
-                for count in range(0,schedule_profile_names.count("|")):
-                    levelactions += "|"
-                Options = {"LevelActions": levelactions, "LevelNames": schedule_profile_names, "LevelOffHidden": "false", "SelectorStyle": "1"}
-                Domoticz.Device(Name="Schedule Profile Names", Unit=1, Used=1, TypeName="Selector Switch", Options=Options).Create() 
+            for thermostat in value:
+                schedule_profile_names = "---|"
+                for key_thermostats, value_thermostats in thermostat.items():
+                    if key_thermostats == "schedule_profile_names":
+                        for item in value_thermostats:
+                            schedule_profile_names += str(item) + "|"
+                if schedule_profile_names != "":
+                    levelactions = ""
+                    count = 0
+                    schedule_profile_names = schedule_profile_names[:-1]
+                    for count in range(0,schedule_profile_names.count("|")):
+                        levelactions += "|"
+                    Options = {"LevelActions": levelactions, "LevelNames": schedule_profile_names, "LevelOffHidden": "false", "SelectorStyle": "1"}
+                    Domoticz.Device(Name="Schedule Profile Names", Unit=1, Used=1, TypeName="Selector Switch", Options=Options).Create() 
     Domoticz.Device(Name="Temperature", Unit=2, Used=1, Type=80, Subtype=5).Create()
     Domoticz.Device(Name="Setpoint", Unit=3, Type=242, Subtype=1, Used=1).Create()
     Domoticz.Device(Name="Child lock", Unit=4, Type=244, Subtype=73, Switchtype=0, Used=1).Create()
@@ -612,6 +624,30 @@ def updateFlood(json_request):
                 Devices[1].Update(nValue=4, sValue="Flood")
             else:
                 Devices[1].Update(nValue=1, sValue="None")
+
+def updateHT(json_request):
+    #json_request = {"tmp": {"value": 22}, "hum": {"value": 57}, "bat": {"value": 71}}
+    tmp = ""
+    hum = ""
+    for key, value in json_request.items():
+        if key == "bat":
+            for key_bat, value_bat in value.items():
+                if key_bat == "value":
+                    Devices[1].Update(nValue=Devices[1].nValue, sValue=Devices[1].sValue, BatteryLevel=value_bat)
+                    Devices[2].Update(nValue=Devices[2].nValue, sValue=Devices[2].sValue, BatteryLevel=value_bat)
+                    Devices[3].Update(nValue=Devices[3].nValue, sValue=Devices[3].sValue, BatteryLevel=value_bat)
+        elif key == "tmp":
+            for key_tmp, value_tmp in value.items():
+                if key_tmp == "value":
+                    tmp = str(value_tmp)
+                    Devices[1].Update(nValue=Devices[1].nValue, sValue=tmp)
+        elif key == "hum":
+            for key_hum, value_hum in value.items():
+                if key_hum == "value":
+                    hum = str(value_hum)
+                    Devices[2].Update(nValue=value_hum, sValue=Devices[2].sValue)
+    if tmp != "" and hum != "":
+        Devices[3].Update(nValue=Devices[3].nValue, sValue=tmp+";"+hum)
 
 def updateGAS(self, json_request):
     json_request0 = {"gas_sensor": {"alarm_state": "none"}, "concentration": {"ppm": 100}}
