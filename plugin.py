@@ -444,6 +444,11 @@ def createSHSWL(json_items):
         meter={"power":0,"total":0}
         createMeter(name, meter, count)
         count = count + 1
+        
+    for temperatureIdx in temperatures:
+        Domoticz.Log("ext_temperature - key: " + temperatureIdx)
+        Domoticz.Device(Name = "Temp" + temperatureIdx, Unit = 31 + int(temperatureIdx), Used=1, Type=80, Subtype=5).Create()
+
     #Domoticz.Device(Name="Led Disable", Unit=40, Type=244, Subtype=73, Switchtype=0, Used=1).Create()
     
 def createSHSW1(json_items):
@@ -794,6 +799,16 @@ def updateSHSW1(json_request):
         updateRelay(relay, count)
         updateMeter(meters[count], count)
         count = count + 1
+
+    for Idx_Ext_Temp, y in temperatures.items():
+        for key, value in y.items():
+            if key == "hwID":
+                Domoticz.Log("ext_temperature - hwID vlaue: " + value)
+            if key == "tC":
+                Domoticz.Log("ext_temperature - tC vlaue: " + str(value))
+                if value != 999:
+                    Devices[31 + int(Idx_Ext_Temp)].Update(nValue=0, sValue=str(value))
+#                    Domoticz.Log("ext_temperature - update")
 
 def updateSHSW25(json_request):
     relays = None
