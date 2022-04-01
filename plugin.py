@@ -41,6 +41,7 @@
                <option label="Shelly EM" value="SHEM"/>
             </options> 
         </param>
+       <param field="Mode2" label="Heartbeat In Seconds" width="50px" required="true" default="30"/>
     </params>
 </plugin>
 """
@@ -70,12 +71,18 @@ class BasePlugin:
     SHELLY_EM="SHEM"
     SHELLY_3EM="SHEM-3"
 
+    HeartbeatInSeconds = 30
+
     def __init__(self):
         return
 
     def onStart(self):
         Domoticz.Log("onStart called")
-        Domoticz.Heartbeat(30)
+        self.HeartbeatInSeconds = int(Parameters["Mode2"])
+        if self.HeartbeatInSeconds < 0:
+            Domoticz.Error("HeartbeatInSeconds size out of boundary error (HeartbeatInSeconds>0). Default value 30 is being used")
+
+        Domoticz.Heartbeat(self.HeartbeatInSeconds)
         try:
             headers = {'content-type':'application/json'}
             response_shelly = requests.get("http://"+Parameters["Address"]+"/settings", headers=headers, auth=(Parameters["Username"], Parameters["Password"]), timeout=(10,10))
@@ -84,6 +91,8 @@ class BasePlugin:
             if len(Devices) == 0:
                 if Parameters["Mode1"] == self.SHELLY_1:
                     createSHSW1(json_items)
+                elif Parameters["Mode1"] == self.SHELLY_IX3:
+                    createSHIX3(json_items)
                 elif Parameters["Mode1"] == self.SHELLY_1L or Parameters["Mode1"] == self.SHELLY_1PM:
                     createSHSWL(json_items)
                 elif Parameters["Mode1"] == self.SHELLY_25:
@@ -307,6 +316,8 @@ class BasePlugin:
                     updateGAS(self, json_request)
                 elif Parameters["Mode1"] == self.SHELLY_EM or Parameters["Mode1"] == self.SHELLY_3EM:
                     updateEM(json_request)
+                elif Parameters["Mode1"] == self.SHELLY_IX3:
+                    updateSHIX3(json_request)
                 request_shelly_status.close()
             except requests.exceptions.Timeout as e:
                 Domoticz.Error(str(e))
@@ -445,7 +456,18 @@ def createSHSWL(json_items):
         createMeter(name, meter, count)
         count = count + 1
     #Domoticz.Device(Name="Led Disable", Unit=40, Type=244, Subtype=73, Switchtype=0, Used=1).Create()
-    
+
+def createSHIX3(json_items):
+    Domoticz.Log("createSHIX3")
+    inputs = None
+    for key, value in json_items.items():
+        if key == "inputs":
+            inputs = value
+    count = 0
+    for inputix3 in inputs:
+        name = createInput(inputix3, count)
+        count = count + 1
+
 def createSHSW1(json_items):
     relays = None
     for key, value in json_items.items():
@@ -584,6 +606,17 @@ def createRelay(relay, count):
     Domoticz.Device(Name=name, Unit=1+count, Used=1, Type=244, Subtype=73).Create()
     if ison == True:
         Devices[1+count].Update(nValue=1, sValue="On")
+    return name
+
+def createInput(inputix3, count):
+    Domoticz.Log("createInput")
+    name = ""
+    for key, value in inputix3.items():
+        if key == "name":
+            name = value
+    if name == "" or name is None:
+        name = "Input"+str(count)
+    Domoticz.Device(Name=name, Unit=1+count, Used=1, Type=244, Subtype=62, Switchtype=2).Create()
     return name
 
 def createRoller(hostname, count):
@@ -795,6 +828,18 @@ def updateSHSW1(json_request):
         updateMeter(meters[count], count)
         count = count + 1
 
+def updateSHIX3(json_request):
+    Domoticz.Log("updateSHIX3")
+    inputs = None
+    for key, value in json_request.items():
+        if key == "inputs":
+            inputs = value
+
+    count = 0
+    for inputix3 in inputs:
+        updateInput(inputix3, count)
+        count = count + 1
+
 def updateSHSW25(json_request):
     relays = None
     meters = None
@@ -890,6 +935,16 @@ def updateLight(light, count):
 def updateRelay(relay, count):
     for key, value in relay.items():
         if key == "ison":
+            if value:
+                if Devices[1+count].nValue != 1:
+                    Devices[1+count].Update(nValue=1, sValue="On")
+            else:
+                Devices[1+count].Update(nValue=0, sValue="Off")
+
+def updateInput(inputix3, count):
+    Domoticz.Log("updateInput")
+    for key, value in inputix3.items():
+        if key == "input":
             if value:
                 if Devices[1+count].nValue != 1:
                     Devices[1+count].Update(nValue=1, sValue="On")
