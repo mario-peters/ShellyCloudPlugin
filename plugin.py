@@ -294,17 +294,17 @@ class BasePlugin:
                 json_request = json.loads(request_shelly_status.text)
                 #Domoticz.Log(str(json_request))
                 if Parameters["Mode1"] == self.SHELLY_1 or Parameters["Mode1"] == self.SHELLY_PLUG or Parameters["Mode1"] == self.SHELLY_1PM or Parameters["Mode1"] == self.SHELLY_1L:
-                    updateSHSW1(json_request)
+                    updateSHSW1(json_request, self)
                 elif Parameters["Mode1"] == self.SHELLY_25:
-                    updateSHSW25(json_request)
+                    updateSHSW25(json_request, self)
                 elif Parameters["Mode1"] == self.SHELLY_MOTION:
                     updateMOTION(json_request)
                 elif Parameters["Mode1"] == self.SHELLY_TRV:
                     updateTRV(self, json_request)
                 elif Parameters["Mode1"] == self.SHELLY_DIMMER:
-                    updateSHDM1(json_request)
+                    updateSHDM1(json_request, self)
                 elif Parameters["Mode1"] == self.SHELLY_RGBW2 or Parameters["Mode1"] == self.SHELLY_BULB:
-                    updateSHRGBW2(self, json_request)
+                    updateSHRGBW2(self, json_request, self)
                 elif Parameters["Mode1"] == self.SHELLY_SMOKE:
                     updateSMOKE(json_request)
                 elif Parameters["Mode1"] == self.SHELLY_HT:
@@ -315,7 +315,7 @@ class BasePlugin:
                 elif Parameters["Mode1"] == self.SHELLY_GAS:
                     updateGAS(self, json_request)
                 elif Parameters["Mode1"] == self.SHELLY_EM or Parameters["Mode1"] == self.SHELLY_3EM:
-                    updateEM(json_request)
+                    updateEM(json_request, self)
                 elif Parameters["Mode1"] == self.SHELLY_IX3:
                     updateSHIX3(json_request)
                 request_shelly_status.close()
@@ -792,7 +792,7 @@ def updateTRV(self, json_request):
                     Devices[3].Update(nValue=Devices[3].nValue, sValue=Devices[3].sValue, BatteryLevel=value_bat)
                     Devices[4].Update(nValue=Devices[4].nValue, sValue=Devices[4].sValue, BatteryLevel=value_bat)
 
-def updateEM(json_request):
+def updateEM(json_request, self):
     #EM
     json_request1 = {"relays": [{"ison": False}], "emeters": [{"power": 120.4, "total": 1213.1, "total_returned": 1221.3}, {"power": 10.3, "total": 1111.3, "total_returned": 1222.3}]}
     #json_request = json_request1
@@ -811,10 +811,10 @@ def updateEM(json_request):
         updateRelay(relay, count)
     count = 0
     for meter in meters:
-        updateMeter(meters[count], count)
+        updateMeter(meters[count], count, self)
         count = count + 1
         
-def updateSHSW1(json_request):
+def updateSHSW1(json_request, self):
     relays = None
     meters = None
     for key, value in json_request.items():
@@ -825,7 +825,7 @@ def updateSHSW1(json_request):
     count = 0
     for relay in relays:
         updateRelay(relay, count)
-        updateMeter(meters[count], count)
+        updateMeter(meters[count], count, self)
         count = count + 1
 
 def updateSHIX3(json_request):
@@ -840,7 +840,7 @@ def updateSHIX3(json_request):
         updateInput(inputix3, count)
         count = count + 1
 
-def updateSHSW25(json_request):
+def updateSHSW25(json_request, self):
     relays = None
     meters = None
     for key, value in json_request.items():
@@ -853,10 +853,10 @@ def updateSHSW25(json_request):
     count = 1
     for relay in relays:
         updateRelay(relay, count)
-        updateMeter(meters[count-1], count)
+        updateMeter(meters[count-1], count, self)
         count = count + 1
 
-def updateSHDM1(json_request):
+def updateSHDM1(json_request, self):
     lights = []
     meters = None
     for key, value in json_request.items():
@@ -868,10 +868,10 @@ def updateSHDM1(json_request):
     #Devices[1].Update(nValue=1, sValue="50")
     for light in lights:
         updateLight(light, count)
-        updateMeter(meters[count], count)
+        updateMeter(meters[count], count, self)
         count = count + 1
 
-def updateSHRGBW2(self, json_request):
+def updateSHRGBW2(self, json_request, self):
     lights = []
     meters = []
     for key, value in json_request.items():
@@ -882,7 +882,7 @@ def updateSHRGBW2(self, json_request):
     count = 0
     for light in lights:
         updateLight(light, count)
-        updateMeter(meters[count], count)
+        updateMeter(meters[count], count, self)
         count = count + 1
 
 def updateRGBLight(self,light,count):
@@ -951,7 +951,7 @@ def updateInput(inputix3, count):
             else:
                 Devices[1+count].Update(nValue=0, sValue="Off")
 
-def updateMeter(meter, count):
+def updateMeter(meter, count, self):
     power = ""
     for key, value in meter.items():
         if key == "power":
@@ -960,7 +960,8 @@ def updateMeter(meter, count):
     for key, value in meter.items():
         if key == "total":
             total=int(value)
-            total=total/60
+            if Parameters["Mode1"] != self.SHELLY_EM and Parameters["Mode1"] != self.SHELLY_3EM:
+                total = total/60
             total=int(total)
             Devices[21+count].Update(nValue=0,sValue=power+";"+str(total))
         if key == "total_returned":
