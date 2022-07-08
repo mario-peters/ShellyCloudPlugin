@@ -304,7 +304,7 @@ class BasePlugin:
                 elif Parameters["Mode1"] == self.SHELLY_DIMMER:
                     updateSHDM1(json_request, self)
                 elif Parameters["Mode1"] == self.SHELLY_RGBW2 or Parameters["Mode1"] == self.SHELLY_BULB:
-                    updateSHRGBW2(self, json_request, self)
+                    updateSHRGBW2(json_request, self)
                 elif Parameters["Mode1"] == self.SHELLY_SMOKE:
                     updateSMOKE(json_request)
                 elif Parameters["Mode1"] == self.SHELLY_HT:
@@ -871,7 +871,7 @@ def updateSHDM1(json_request, self):
         updateMeter(meters[count], count, self)
         count = count + 1
 
-def updateSHRGBW2(self, json_request, self):
+def updateSHRGBW2(json_request, self):
     lights = []
     meters = []
     for key, value in json_request.items():
