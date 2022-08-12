@@ -850,11 +850,12 @@ def updateSHSW25(json_request, self):
             meters = value
         if key == "temperature":
             Devices[1].Update(nValue=Devices[1].nValue, sValue=str(value))
-    count = 1
-    for relay in relays:
-        updateRelay(relay, count)
-        updateMeter(meters[count-1], count, self)
-        count = count + 1
+    if self.mode == "relay":
+        count = 1
+        for relay in relays:
+            updateRelay(relay, count)
+            updateMeter(meters[count-1], count, self)
+            count = count + 1
 
 def updateSHDM1(json_request, self):
     lights = []
