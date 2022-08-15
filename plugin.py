@@ -23,6 +23,7 @@
         <param field="Mode1" label="Type" width="200px" required="true">
             <options>
                <option label="Shelly 1" value="SHSW-1"/>
+               <option label="Shelly IX3" value="SHIX3-1"/>
                <option label="Shelly PM" value="SHSW-PM"/>
                <option label="Shelly 1L" value="SHSW-L"/>
                <option label="Shelly 2.5" value="SHSW-25"/>
@@ -54,6 +55,7 @@ class BasePlugin:
     #mode = None
     mode = "color"
     SHELLY_1 = "SHSW-1"
+    SHELLY_IX3 = "SHIX3-1"
     SHELLY_1PM = "SHSW-PM"
     SHELLY_1L="SHSW-L"
     SHELLY_25 = "SHSW-25"
