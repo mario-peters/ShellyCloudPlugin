@@ -313,7 +313,7 @@ class BasePlugin:
                     updateHT(json_request)
                 elif Parameters["Mode1"] == self.SHELLY_FLOOD:
                     updateFlood(json_request)
-                #elif Parameters["Mode1"] == self.SHELLY_DW2:
+                #elif Parameters["Mode1"] == self.SHELLY_DW:
                 elif Parameters["Mode1"] == self.SHELLY_GAS:
                     updateGAS(self, json_request)
                 elif Parameters["Mode1"] == self.SHELLY_EM or Parameters["Mode1"] == self.SHELLY_3EM:
