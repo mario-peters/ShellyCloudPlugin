@@ -115,7 +115,7 @@ class BasePlugin:
                     createSMOKE()
                 elif Parameters["Mode1"] == self.SHELLY_FLOOD:
                     createFlood()
-                elif Parameters["Mode1"] == self.DW:
+                elif Parameters["Mode1"] == self.SHELLY_DW:
                     createSHDW2()
                 elif Parameters["Mode1"] == self.SHELLY_GAS:
                     createGAS()
