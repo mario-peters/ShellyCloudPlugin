@@ -195,6 +195,10 @@ class BasePlugin:
                     url = url +"&red="+str(r)+"&green="+str(g)+"&blue="+str(b)+"&white="+str(cw)+"&gain="+str(Level)
                 if self.mode == "white":
                     url = url +"&white="+str(cw)+"&brightness="+str(Level)
+            elif str(Command) == "Stop":
+                if Parameters["Mode1"] == self.SHELLY_25:
+                    if self.mode == "roller":
+                        url = url + "?go=stop"
             else:
                 Domoticz.Log("Unknown command: "+str(Command))
         elif Parameters["Mode1"] == self.SHELLY_TRV:
