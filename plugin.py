@@ -155,6 +155,12 @@ class BasePlugin:
                     url = url + "/relay/" + str(Unit-2)
                 elif self.mode == "roller":
                     url = url + "/roller/" + str(Unit-2)
+                    if str(Command) == "Open":
+                        url = url + "?go=open"
+                    elif str(Command) == "Close":
+                        url = url + "?go=close"
+                    elif str(Command) == "Stop":
+                        url = url + "?go=stop"
             if Parameters["Mode1"] == "SHDM-1":
                 url = url + "/light/" + str(Unit-1)
             if Parameters["Mode1"] == "SHRGBW2" or Parameters["Mode1"] == "SHBLB-1":
@@ -163,15 +169,9 @@ class BasePlugin:
                 if self.mode == "white":
                     url = url +"/white/" + str(Unit-1)
             if str(Command) == "On":
-                if self.mode == "roller":
-                    url = url + "?go=open"
-                else:
-                    url = url + "?turn=on"
+                url = url + "?turn=on"
             elif str(Command) == "Off":
-                if self.mode == "roller":
-                    url = url + "?go=close"
-                else:
-                    url = url + "?turn=off"
+                url = url + "?turn=off"
             elif str(Command) == "Set Level":
                 if self.mode == "color" and Parameters["Mode1"] != "SHDM-1":
                     url = url + "?turn=on&gain=" + str(Level)
@@ -195,10 +195,6 @@ class BasePlugin:
                     url = url +"&red="+str(r)+"&green="+str(g)+"&blue="+str(b)+"&white="+str(cw)+"&gain="+str(Level)
                 if self.mode == "white":
                     url = url +"&white="+str(cw)+"&brightness="+str(Level)
-            elif str(Command) == "Stop":
-                if Parameters["Mode1"] == self.SHELLY_25:
-                    if self.mode == "roller":
-                        url = url + "?go=stop"
             else:
                 Domoticz.Log("Unknown command: "+str(Command))
         elif Parameters["Mode1"] == self.SHELLY_TRV:
@@ -282,7 +278,7 @@ class BasePlugin:
             else:
                 Devices[Unit].Update(nValue=1,sValue=str(Level))
         else:
-            Domoticz.Log("Unknown command: "+str(Command))
+            Domoticz.Log("Update "+Devices[Unit].Name+": Unknown command: "+str(Command))
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
         Domoticz.Log("Notification: " + Name + "," + Subject + "," + Text + "," + Status + "," + str(Priority) + "," + Sound + "," + ImageFile)
